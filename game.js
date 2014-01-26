@@ -35,12 +35,11 @@ Game.prototype.handleKeyPress = function(event) {
     event.data.player.speedX = Math.min(
         event.data.player.speedX, -PLAYER_MAX_SPEED);
   } else if (event.which == 32) { // space
-    console.log('space!');
-    var grounds = this.getGroundBeneathPlayer();
-    var ground = grounds[0];
-    if (ground) {
-      this.scene.remove(this.grounds[ground]);
-      this.grounds.splice(ground, 1);
+    var groundCoord = this.getGroundBeneathPlayer();
+    if (groundCoord) {
+      var ground = this.terrainGrid[[groundCoord[0], groundCoord[1]]];
+      this.scene.remove(ground.sprite);
+      delete this.terrainGrid[[groundCoord[0], groundCoord[1]]];
     }
   } else {
     console.log('pushed unknown button ', event.which);
@@ -51,31 +50,35 @@ Game.prototype.addEntity = function(entity) {
   this.scene.add(entity.sprite);
 };
 
+Game.prototype.gridToDisplay = function(x, y) {
+  return [x * 64, y * 64];
+};
+
+Game.prototype.displayToGrid = function(x, y) {
+  return [Math.floor(x / 64), Math.floor(y / 64)];
+};
+
 Game.prototype.getGroundBeneathPlayer = function () {
-  var results = [];
-  var self = this;
-  var i = 0;
-  this.grounds.forEach(function(ground) {
-    if ((self.player.sprite.position.x <= ground.position.x) &&
-        (self.player.sprite.position.x < ground.position.x + 64)) {
-      results.push(i);
-    }
-    i++;
-  });
-  return results;
+  var coords = this.displayToGrid(this.player.sprite.position.x,
+                                  this.player.sprite.position.y);
+
+  var height = coords[1];
+  console.log(this.terrainGrid);
+  while (!([coords[0], height] in this.terrainGrid)) {
+    height -= 1;
+  }
+  return [coords[0], height];
 }
 
 Game.prototype.start = function() {
   this.player = new Player();
   this.addEntity(this.player);
 
-  this.grounds = [];
   for (var i = -30; i < 30; i++) {
     for (var j = 0; j > -6; j--) {
       var ground = new Ground(i, j);
       this.terrainGrid[[ground.x, ground.y]] = ground;
       this.addEntity(ground);
-      this.grounds.push(ground.sprite);
     }
 
     if (Math.random() < 0.5) {
