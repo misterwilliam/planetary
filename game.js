@@ -41,10 +41,12 @@ Game.prototype.start = function() {
   var groundTexture = THREE.ImageUtils.loadTexture('images/ground.png');
   var groundMaterial = new THREE.SpriteMaterial({ map: groundTexture });
   for (var i = -30; i < 30; i++) {
-    var groundSprite = new THREE.Sprite(groundMaterial);
-    groundSprite.position.set(i * 64,-74,0);
-    groundSprite.scale.set(64, 64, 1.0);
-    this.scene.add(groundSprite);
+    for (var j = 0; j > -6; j--) {
+      var groundSprite = new THREE.Sprite(groundMaterial);
+      groundSprite.position.set(i * 64,-74 + (64 * j),0);
+      groundSprite.scale.set(64, 64, 1.0);
+      this.scene.add(groundSprite);
+    }
   }
   this.scene.add(this.playerSprite);
 
