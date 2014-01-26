@@ -45,10 +45,12 @@ Game.prototype.start = function() {
   var plantTexture = THREE.ImageUtils.loadTexture('images/plant.png');
   var plantMaterial = new THREE.SpriteMaterial({ map: plantTexture });
   for (var i = -30; i < 30; i++) {
-    var groundSprite = new THREE.Sprite(groundMaterial);
-    groundSprite.position.set(i * 64,-74,0);
-    groundSprite.scale.set(64, 64, 1.0);
-    this.scene.add(groundSprite);
+    for (var j = 0; j > -6; j--) {
+      var groundSprite = new THREE.Sprite(groundMaterial);
+      groundSprite.position.set(i * 64,-74 + (64 * j),0);
+      groundSprite.scale.set(64, 64, 1.0);
+      this.scene.add(groundSprite);
+    }
 
     if (Math.random() < 0.5) {
       var plantSprite = new THREE.Sprite(plantMaterial);
