@@ -24,7 +24,7 @@ Ground.prototype.tick = function() {
     if (this.sprite.material == DRY_MATERIAL) {
       this.beWet();
     } else {
-      this.beDry();
+    	this.beDry();
     }
     this.t = 0;
   }
