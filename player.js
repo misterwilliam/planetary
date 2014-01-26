@@ -11,4 +11,9 @@ Player.prototype.tick = function() {
   if (this.sprite.position.y > 0) {
     this.sprite.position.y -= 1;
   }
-}
+};
+
+Player.prototype.jump = function() {
+	var JUMP_HEIGHT = 10;
+	this.sprite.position.y += JUMP_HEIGHT;
+};

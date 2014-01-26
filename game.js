@@ -19,7 +19,7 @@ Game.prototype.handleKeyPress = function(event) {
   var PLAYER_SPEED = 6;
   var JUMP_HEIGHT = 10;
   if (event.which == 119) {  // w
-    event.data.player.sprite.position.y += JUMP_HEIGHT;
+    event.data.player.jump();
   } else if (event.which == 115) {  // s
     event.data.player.sprite.position.y -= PLAYER_SPEED;
   } else if (event.which == 100) {  // d
