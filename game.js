@@ -1,10 +1,17 @@
+var getNow = (function() {
+  if (window.performance && window.performance.now) {
+    return window.performance.now.bind(window.performance);
+  }
+  return function(){return +Date()};
+})();
+
 function Game(scene, camera, renderer) {
   this.scene = scene;
   this.camera = camera;
   this.renderer = renderer;
 
-  this.now = Date.now();
-  this.lastTime = Date.now();
+  this.now = getNow();
+  this.lastTime = getNow();
   this.unprocessedFrames = 0;
 };
 
@@ -38,7 +45,7 @@ Game.prototype.start = function() {
 
 // Called when when we are allowed to render. In general at 60 fps.
 Game.prototype.animate = function() {
-  this.now = Date.now();
+  this.now = getNow();
   this.unprocessedFrames += (this.now - this.lastTime) * 60.0 / 1000.0; // 60 fps
   this.lastTime = this.now;
   if (this.unprocessedFrames > 10.0) {
