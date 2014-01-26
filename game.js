@@ -16,8 +16,10 @@ function Game(scene, camera, renderer) {
 };
 
 Game.prototype.handleKeyPress = function(event) {
-  var PLAYER_SPEED = 6;
+  var PLAYER_MAX_SPEED = 20;
+  var PLAYER_ACCELERATION = 2;
   var JUMP_HEIGHT = 10;
+
   if (event.which == 119) {  // w
     event.data.player.sprite.position.y += JUMP_HEIGHT;
   } else if (event.which == 115) {  // s

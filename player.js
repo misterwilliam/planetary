@@ -1,6 +1,8 @@
 function Player () {
   var dudeTexture = THREE.ImageUtils.loadTexture('images/dude.png');
   var dudeMaterial = new THREE.SpriteMaterial({ map: dudeTexture });
+  this.speedX = 0;
+  this.speedY = 0;
   this.sprite = new THREE.Sprite(dudeMaterial);
   this.sprite.position.set(0, 100, 0);
   this.sprite.scale.set(4*13, 4*21, 1.0); // imageWidth, imageHeight
