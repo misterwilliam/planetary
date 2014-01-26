@@ -13,6 +13,8 @@ function Game(scene, camera, renderer) {
   this.now = getNow();
   this.lastTime = getNow();
   this.unprocessedFrames = 0;
+
+  this.terrainGrid = {};
 };
 
 Game.prototype.handleKeyPress = function(event) {
@@ -38,6 +40,10 @@ Game.prototype.handleKeyPress = function(event) {
   }
 };
 
+Game.prototype.addEntity = function(entity) {
+  this.scene.add(entity.sprite);
+};
+
 Game.prototype.getGroundBeneathPlayer = function () {
   var results = [];
   var self = this;
@@ -52,26 +58,27 @@ Game.prototype.getGroundBeneathPlayer = function () {
 
 Game.prototype.start = function() {
   this.player = new Player();
-  this.scene.add(this.player.sprite);
+  this.addEntity(this.player);
 
   this.grounds = [];
   for (var i = -30; i < 30; i++) {
     for (var j = 0; j > -6; j--) {
-      var ground = new Ground(i * 64, -74 + (64 * j), 0);
-      this.scene.add(ground.sprite);
+      var ground = new Ground(i, j);
+      this.terrainGrid[[ground.x, ground.y]] = ground;
+      this.addEntity(ground);
       this.grounds.push(ground.sprite);
     }
 
     if (Math.random() < 0.5) {
       var plant = new Plant(i * 64, -10, 0);
-      this.scene.add(plant.sprite);
+      this.addEntity(plant);
     }
   }
 
   $(document).on("keypress", this, this.handleKeyPress.bind(this));
   requestAnimationFrame(this.animate.bind(this));
-}
 
+}
 // Called when when we are allowed to render. In general at 60 fps.
 Game.prototype.animate = function() {
   this.now = getNow();
@@ -96,6 +103,9 @@ Game.prototype.render = function() {
 // Single tick of game time (1 frame)
 Game.prototype.tick = function() {
   this.player.tick();
+  for (var coords in this.terrainGrid) {
+    this.terrainGrid[coords].tick();
+  }
 }
 
 var game; // globally visible for debugging;
