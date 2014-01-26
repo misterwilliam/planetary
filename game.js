@@ -2,7 +2,7 @@ var getNow = (function() {
   if (window.performance && window.performance.now) {
     return window.performance.now.bind(window.performance);
   }
-  return function(){return +Date()};
+  return function(){return +new Date()};
 })();
 
 function Game(scene, camera, renderer) {
@@ -26,11 +26,36 @@ Game.prototype.handleKeyPress = function(event) {
     event.data.player.sprite.position.x += PLAYER_SPEED;
   } else if (event.which == 97) {  // d
     event.data.player.sprite.position.x -= PLAYER_SPEED;
+  } else if (event.which == 32) { // space
+    console.log('space!');
+    var grounds = this.getGroundBeneathPlayer();
+    var ground = grounds[0];
+    if (ground) {
+      this.scene.remove(ground);
+    }
+  } else {
+    console.log('pushed unknown button ', event.which);
   }
 };
 
+Game.prototype.getGroundBeneathPlayer = function () {
+  var results = [];
+  var self = this;
+  this.grounds.forEach(function(ground) {
+    if ((self.player.sprite.position.x <= ground.position.x) &&
+        (self.player.sprite.position.x < ground.position.x + 64)) {
+      results.push(ground);
+    }
+  });
+  return results;
+}
+
 Game.prototype.start = function() {
-  $(document).on("keypress", this, this.handleKeyPress);
+  var dudeTexture = THREE.ImageUtils.loadTexture('images/dude.png');
+  var dudeMaterial = new THREE.SpriteMaterial({ map: dudeTexture });
+  var sprite = new THREE.Sprite(dudeMaterial);
+  sprite.position.set(0, 100, 0);
+  sprite.scale.set(4*13, 4*21, 1.0); // imageWidth, imageHeight
 
   this.player = new Player();
   this.scene.add(this.player.sprite);
@@ -39,12 +64,15 @@ Game.prototype.start = function() {
   var groundMaterial = new THREE.SpriteMaterial({ map: groundTexture });
   var plantTexture = THREE.ImageUtils.loadTexture('images/plant.png');
   var plantMaterial = new THREE.SpriteMaterial({ map: plantTexture });
+
+  this.grounds = [];
   for (var i = -30; i < 30; i++) {
     for (var j = 0; j > -6; j--) {
       var groundSprite = new THREE.Sprite(groundMaterial);
       groundSprite.position.set(i * 64,-74 + (64 * j),0);
       groundSprite.scale.set(64, 64, 1.0);
       this.scene.add(groundSprite);
+      this.grounds.push(groundSprite);
     }
 
     if (Math.random() < 0.5) {
@@ -55,6 +83,7 @@ Game.prototype.start = function() {
     }
   }
 
+  $(document).on("keypress", this, this.handleKeyPress.bind(this));
   requestAnimationFrame(this.animate.bind(this));
 }
 
