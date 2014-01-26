@@ -27,9 +27,9 @@ Game.prototype.start = function() {
 
   var dudeTexture = THREE.ImageUtils.loadTexture('images/dude.png');
   var dudeMaterial = new THREE.SpriteMaterial({ map: dudeTexture });
-      var sprite = new THREE.Sprite( dudeMaterial );
-      sprite.position.set(0, 0, 0);
-      sprite.scale.set(4*13, 4*21, 1.0); // imageWidth, imageHeight
+  var sprite = new THREE.Sprite( dudeMaterial );
+  sprite.position.set(0, 0, 0);
+  sprite.scale.set(4*13, 4*21, 1.0); // imageWidth, imageHeight
   this.playerSprite = sprite;
   this.scene.add(this.playerSprite);
 
@@ -39,15 +39,15 @@ Game.prototype.start = function() {
 // Called when when we are allowed to render. In general at 60 fps.
 Game.prototype.animate = function() {
   this.now = Date.now();
-    this.unprocessedFrames += (this.now - this.lastTime) * 60.0 / 1000.0; // 60 fps
-    this.lastTime = this.now;
-    if (this.unprocessedFrames > 10.0) {
-      this.unprocessedFrames = 10.0;
-    }
-      while (this.unprocessedFrames > 1.0) {
-        this.tick();
-        this.unprocessedFrames -= 1.0;
-      }
+  this.unprocessedFrames += (this.now - this.lastTime) * 60.0 / 1000.0; // 60 fps
+  this.lastTime = this.now;
+  if (this.unprocessedFrames > 10.0) {
+    this.unprocessedFrames = 10.0;
+  }
+  while (this.unprocessedFrames > 1.0) {
+    this.tick();
+    this.unprocessedFrames -= 1.0;
+  }
   this.render();
   requestAnimationFrame(this.animate.bind(this));
 }
@@ -67,9 +67,9 @@ Game.prototype.tick = function() {
 
 $(document).ready(function(){
   var scene = new THREE.Scene();
-      var camera = new THREE.PerspectiveCamera(90,
-              window.innerWidth/window.innerHeight, 0.1, 1000);
-      camera.position.set(0, 0, 400);
+  var camera = new THREE.PerspectiveCamera(90,
+          window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 0, 400);
 
   var renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
