@@ -35,7 +35,7 @@ Game.prototype.start = function() {
   var dudeTexture = THREE.ImageUtils.loadTexture('images/dude.png');
   var dudeMaterial = new THREE.SpriteMaterial({ map: dudeTexture });
   var sprite = new THREE.Sprite( dudeMaterial );
-  sprite.position.set(0, 0, 0);
+  sprite.position.set(0, 100, 0);
   sprite.scale.set(4*13, 4*21, 1.0); // imageWidth, imageHeight
   this.playerSprite = sprite;
   this.scene.add(this.playerSprite);
@@ -72,6 +72,7 @@ Game.prototype.tick = function() {
   }
 }
 
+var game; // globally visible for debugging;
 $(document).ready(function(){
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(90,
@@ -82,6 +83,6 @@ $(document).ready(function(){
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  var game = new Game(scene, camera, renderer);
+  game = new Game(scene, camera, renderer);
   game.start();
 });
