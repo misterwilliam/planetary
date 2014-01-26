@@ -33,9 +33,12 @@ Game.prototype.start = function() {
   $(document).on("keypress", this, this.handleKeyPress);
 
   this.player = new Player();
+  this.scene.add(this.player.sprite);
 
   var groundTexture = THREE.ImageUtils.loadTexture('images/ground.png');
   var groundMaterial = new THREE.SpriteMaterial({ map: groundTexture });
+  var plantTexture = THREE.ImageUtils.loadTexture('images/plant.png');
+  var plantMaterial = new THREE.SpriteMaterial({ map: plantTexture });
   for (var i = -30; i < 30; i++) {
     for (var j = 0; j > -6; j--) {
       var groundSprite = new THREE.Sprite(groundMaterial);
@@ -43,8 +46,14 @@ Game.prototype.start = function() {
       groundSprite.scale.set(64, 64, 1.0);
       this.scene.add(groundSprite);
     }
+
+    if (Math.random() < 0.5) {
+      var plantSprite = new THREE.Sprite(plantMaterial);
+      plantSprite.position.set(i * 64, -10, 0);
+      plantSprite.scale.set(64, 64, 1.0);
+      this.scene.add(plantSprite);
+    }
   }
-  this.scene.add(this.player.sprite);
 
   requestAnimationFrame(this.animate.bind(this));
 }
