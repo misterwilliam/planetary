@@ -19,13 +19,13 @@ Game.prototype.handleKeyPress = function(event) {
   var PLAYER_SPEED = 6;
   var JUMP_HEIGHT = 10;
   if (event.which == 119) {  // w
-    event.data.playerSprite.position.y += JUMP_HEIGHT;
+    event.data.player.sprite.position.y += JUMP_HEIGHT;
   } else if (event.which == 115) {  // s
-    event.data.playerSprite.position.y -= PLAYER_SPEED;
+    event.data.player.sprite.position.y -= PLAYER_SPEED;
   } else if (event.which == 100) {  // d
-    event.data.playerSprite.position.x += PLAYER_SPEED;
+    event.data.player.sprite.position.x += PLAYER_SPEED;
   } else if (event.which == 97) {  // d
-    event.data.playerSprite.position.x -= PLAYER_SPEED;
+    event.data.player.sprite.position.x -= PLAYER_SPEED;
   } else if (event.which == 32) { // space
     console.log('space!');
     var grounds = this.getGroundBeneathPlayer();
@@ -42,8 +42,8 @@ Game.prototype.getGroundBeneathPlayer = function () {
   var results = [];
   var self = this;
   this.grounds.forEach(function(ground) {
-    if ((self.playerSprite.position.x <= ground.position.x) &&
-        (self.playerSprite.position.x < ground.position.x + 64)) {
+    if ((self.player.sprite.position.x <= ground.position.x) &&
+        (self.player.sprite.position.x < ground.position.x + 64)) {
       results.push(ground);
     }
   });
@@ -56,8 +56,9 @@ Game.prototype.start = function() {
   var sprite = new THREE.Sprite(dudeMaterial);
   sprite.position.set(0, 100, 0);
   sprite.scale.set(4*13, 4*21, 1.0); // imageWidth, imageHeight
-  this.playerSprite = sprite;
-  this.scene.add(this.playerSprite);
+
+  this.player = new Player();
+  this.scene.add(this.player.sprite);
 
   var groundTexture = THREE.ImageUtils.loadTexture('images/ground.png');
   var groundMaterial = new THREE.SpriteMaterial({ map: groundTexture });
@@ -109,10 +110,7 @@ Game.prototype.render = function() {
 
 // Single tick of game time (1 frame)
 Game.prototype.tick = function() {
-  // Gravity on player
-  if (this.playerSprite.position.y > 0) {
-    this.playerSprite.position.y -= 1;
-  }
+  this.player.tick();
 }
 
 var game; // globally visible for debugging;
