@@ -31,7 +31,8 @@ Game.prototype.handleKeyPress = function(event) {
     var grounds = this.getGroundBeneathPlayer();
     var ground = grounds[0];
     if (ground) {
-      this.scene.remove(ground);
+      this.scene.remove(this.grounds[ground]);
+      this.grounds.splice(ground, 1);
     }
   } else {
     console.log('pushed unknown button ', event.which);
@@ -41,11 +42,13 @@ Game.prototype.handleKeyPress = function(event) {
 Game.prototype.getGroundBeneathPlayer = function () {
   var results = [];
   var self = this;
+  var i = 0;
   this.grounds.forEach(function(ground) {
     if ((self.player.sprite.position.x <= ground.position.x) &&
         (self.player.sprite.position.x < ground.position.x + 64)) {
-      results.push(ground);
+      results.push(i);
     }
+    i++;
   });
   return results;
 }
