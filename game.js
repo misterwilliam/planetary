@@ -62,13 +62,8 @@ Game.prototype.handleKey = function(event) {
   }[event.which]
 
   if (event.type == 'keydown') {
-    if (!this.input[key]) {
-      console.log(key);
-    }
     this.input[key] = true;
   } else {
-    console.log('no longer ', key);
-
     this.input[key] = false;
   }
 }
