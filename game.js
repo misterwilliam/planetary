@@ -35,7 +35,6 @@ Game.prototype.handleKeyPress = function(event) {
     event.data.player.speedX = Math.min(
         event.data.player.speedX, -PLAYER_MAX_SPEED);
   } else if (event.which == 32) { // space
-    console.log('space!');
     var grounds = this.getGroundBeneathPlayer();
     var ground = grounds[0];
     if (ground) {
