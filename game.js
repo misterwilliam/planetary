@@ -1,3 +1,8 @@
+var PLAYER_MAX_SPEED = 8;
+var PLAYER_ACCELERATION = 0.001;
+var JUMP_HEIGHT = 10;
+
+
 var getNow = (function() {
   if (window.performance && window.performance.now) {
     return window.performance.now.bind(window.performance);
@@ -13,38 +18,55 @@ function Game(scene, camera, renderer) {
   this.now = getNow();
   this.lastTime = getNow();
   this.unprocessedFrames = 0;
+  this.input = {
+    jump: false, down: false, right: false, left: false, mine:false
+  };
 
   this.terrainGrid = {};
 };
 
-Game.prototype.handleKeyPress = function(event) {
-  var PLAYER_MAX_SPEED = 8;
-  var PLAYER_ACCELERATION = 2;
-  var JUMP_HEIGHT = 10;
+Game.prototype.handleInput = function() {
+  if (this.input.jump) {
+    this.player.jump();
+  } else if (this.input.down) {
+    this.player.sprite.position.y -= 10;
+  }
 
-  if (event.which == 119) {  // w
-    event.data.player.jump();
-  } else if (event.which == 115) {  // s
-    event.data.player.sprite.position.y -= PLAYER_SPEED;
-  } else if (event.which == 100) {  // d
-    event.data.player.speedX += PLAYER_ACCELERATION;
-    event.data.player.speedX = Math.max(
-        event.data.player.speedX, PLAYER_MAX_SPEED);
-  } else if (event.which == 97) {  // d
-    event.data.player.speedX -= PLAYER_ACCELERATION;
-    event.data.player.speedX = Math.min(
-        event.data.player.speedX, -PLAYER_MAX_SPEED);
-  } else if (event.which == 32) { // space
+  if (this.input.right) {
+    this.player.speedX += PLAYER_ACCELERATION;
+    this.player.speedX = Math.max(
+        this.player.speedX, PLAYER_MAX_SPEED);
+  }  else if (this.input.left) {
+    this.player.speedX -= PLAYER_ACCELERATION;
+    this.player.speedX = Math.min(
+        this.player.speedX, -PLAYER_MAX_SPEED);
+  }
+
+  if (this.input.mine) {
     var groundCoord = this.getGroundBeneathPlayer();
     if (groundCoord) {
       var ground = this.terrainGrid[[groundCoord[0], groundCoord[1]]];
       this.scene.remove(ground.sprite);
       delete this.terrainGrid[[groundCoord[0], groundCoord[1]]];
     }
-  } else {
-    console.log('pushed unknown button ', event.which);
   }
 };
+
+Game.prototype.handleKey = function(event) {
+  var key = {
+    87: 'jump', // w
+    83: 'down', // s
+    68: 'right', // d
+    65: 'left', // a
+    32: 'mine', // space
+  }[event.which]
+
+  if (event.type == 'keydown') {
+    this.input[key] = true;
+  } else {
+    this.input[key] = false;
+  }
+}
 
 Game.prototype.addEntity = function(entity) {
   this.scene.add(entity.sprite);
@@ -63,7 +85,6 @@ Game.prototype.getGroundBeneathPlayer = function () {
                                   this.player.sprite.position.y);
 
   var height = coords[1];
-  console.log(this.terrainGrid);
   while (!([coords[0], height] in this.terrainGrid)) {
     height -= 1;
   }
@@ -87,7 +108,8 @@ Game.prototype.start = function() {
     }
   }
 
-  $(document).on("keypress", this, this.handleKeyPress.bind(this));
+  $(document).on("keydown", this, this.handleKey.bind(this));
+  $(document).on("keyup", this, this.handleKey.bind(this));
   requestAnimationFrame(this.animate.bind(this));
 
 }
@@ -112,8 +134,14 @@ Game.prototype.render = function() {
   this.renderer.render(this.scene, this.camera);
 }
 
+var tickCount = 0;
 // Single tick of game time (1 frame)
 Game.prototype.tick = function() {
+  tickCount ++;
+  if (tickCount % 60 == 0) {
+    // console.log(this.input);
+  }
+  this.handleInput();
   this.player.tick();
   for (var coords in this.terrainGrid) {
     this.terrainGrid[coords].tick();
