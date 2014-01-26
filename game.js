@@ -1,6 +1,7 @@
 var PLAYER_MAX_SPEED = 8;
 var PLAYER_ACCELERATION = 0.001;
 var JUMP_HEIGHT = 10;
+var MAX_DEPTH = -6;
 
 
 var getNow = (function() {
@@ -86,6 +87,9 @@ Game.prototype.getGroundBeneathPlayer = function () {
 
   var height = coords[1];
   while (!([coords[0], height] in this.terrainGrid)) {
+    if (height <= MAX_DEPTH) {
+      return null;
+    }
     height -= 1;
   }
   return [coords[0], height];
