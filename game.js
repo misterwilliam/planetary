@@ -51,19 +51,11 @@ Game.prototype.getGroundBeneathPlayer = function () {
 }
 
 Game.prototype.start = function() {
-  var dudeTexture = THREE.ImageUtils.loadTexture('images/dude.png');
-  var dudeMaterial = new THREE.SpriteMaterial({ map: dudeTexture });
-  var sprite = new THREE.Sprite(dudeMaterial);
-  sprite.position.set(0, 100, 0);
-  sprite.scale.set(4*13, 4*21, 1.0); // imageWidth, imageHeight
-
   this.player = new Player();
   this.scene.add(this.player.sprite);
 
   var groundTexture = THREE.ImageUtils.loadTexture('images/ground.png');
   var groundMaterial = new THREE.SpriteMaterial({ map: groundTexture });
-  var plantTexture = THREE.ImageUtils.loadTexture('images/plant.png');
-  var plantMaterial = new THREE.SpriteMaterial({ map: plantTexture });
 
   this.grounds = [];
   for (var i = -30; i < 30; i++) {
@@ -76,10 +68,8 @@ Game.prototype.start = function() {
     }
 
     if (Math.random() < 0.5) {
-      var plantSprite = new THREE.Sprite(plantMaterial);
-      plantSprite.position.set(i * 64, -10, 0);
-      plantSprite.scale.set(64, 64, 1.0);
-      this.scene.add(plantSprite);
+      var plant = new Plant(i * 64, -10, 0);
+      this.scene.add(plant.sprite);
     }
   }
 
