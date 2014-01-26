@@ -34,10 +34,18 @@ Game.prototype.start = function() {
 
   var dudeTexture = THREE.ImageUtils.loadTexture('images/dude.png');
   var dudeMaterial = new THREE.SpriteMaterial({ map: dudeTexture });
-  var sprite = new THREE.Sprite( dudeMaterial );
+  var sprite = new THREE.Sprite(dudeMaterial);
   sprite.position.set(0, 100, 0);
   sprite.scale.set(4*13, 4*21, 1.0); // imageWidth, imageHeight
   this.playerSprite = sprite;
+  var groundTexture = THREE.ImageUtils.loadTexture('images/ground.png');
+  var groundMaterial = new THREE.SpriteMaterial({ map: groundTexture });
+  for (var i = -30; i < 30; i++) {
+    var groundSprite = new THREE.Sprite(groundMaterial);
+    groundSprite.position.set(i * 64,-74,0);
+    groundSprite.scale.set(64, 64, 1.0);
+    this.scene.add(groundSprite);
+  }
   this.scene.add(this.playerSprite);
 
   requestAnimationFrame(this.animate.bind(this));
