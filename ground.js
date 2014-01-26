@@ -19,11 +19,9 @@ function Ground(x, y) {
 };
 
 Ground.prototype.tick = function() {
-  if (++this.t == 60) {
+  if (++this.t == 120) {
     if (this.sprite.material == DRY_MATERIAL) {
       this.beWet();
-    } else {
-      this.beDry();
     }
     this.t = 0;
   }
