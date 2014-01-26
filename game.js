@@ -19,25 +19,21 @@ Game.prototype.handleKeyPress = function(event) {
   var PLAYER_SPEED = 6;
   var JUMP_HEIGHT = 10;
   if (event.which == 119) {  // w
-    event.data.playerSprite.position.y += JUMP_HEIGHT;
+    event.data.player.sprite.position.y += JUMP_HEIGHT;
   } else if (event.which == 115) {  // s
-    event.data.playerSprite.position.y -= PLAYER_SPEED;
+    event.data.player.sprite.position.y -= PLAYER_SPEED;
   } else if (event.which == 100) {  // d
-    event.data.playerSprite.position.x += PLAYER_SPEED;
+    event.data.player.sprite.position.x += PLAYER_SPEED;
   } else if (event.which == 97) {  // d
-    event.data.playerSprite.position.x -= PLAYER_SPEED;
+    event.data.player.sprite.position.x -= PLAYER_SPEED;
   }
 };
 
 Game.prototype.start = function() {
   $(document).on("keypress", this, this.handleKeyPress);
 
-  var dudeTexture = THREE.ImageUtils.loadTexture('images/dude.png');
-  var dudeMaterial = new THREE.SpriteMaterial({ map: dudeTexture });
-  var sprite = new THREE.Sprite(dudeMaterial);
-  sprite.position.set(0, 100, 0);
-  sprite.scale.set(4*13, 4*21, 1.0); // imageWidth, imageHeight
-  this.playerSprite = sprite;
+  this.player = new Player();
+
   var groundTexture = THREE.ImageUtils.loadTexture('images/ground.png');
   var groundMaterial = new THREE.SpriteMaterial({ map: groundTexture });
   for (var i = -30; i < 30; i++) {
@@ -48,7 +44,7 @@ Game.prototype.start = function() {
       this.scene.add(groundSprite);
     }
   }
-  this.scene.add(this.playerSprite);
+  this.scene.add(this.player.sprite);
 
   requestAnimationFrame(this.animate.bind(this));
 }
@@ -76,10 +72,7 @@ Game.prototype.render = function() {
 
 // Single tick of game time (1 frame)
 Game.prototype.tick = function() {
-  // Gravity on player
-  if (this.playerSprite.position.y > 0) {
-    this.playerSprite.position.y -= 1;
-  }
+  this.player.tick();
 }
 
 var game; // globally visible for debugging;
