@@ -17,6 +17,7 @@ function Game(scene, camera, renderer) {
 
   this.now = getNow();
   this.lastTime = getNow();
+  this.lastMined = -10000;
   this.unprocessedFrames = 0;
   this.input = {
     jump: false, down: false, right: false, left: false, mine:false
@@ -43,6 +44,11 @@ Game.prototype.handleInput = function() {
   }
 
   if (this.input.mine) {
+    var now = getNow();
+    if (now - 1000 < this.lastMined) {
+      return;
+    }
+    this.lastMined = now;
     var grounds = this.getGroundBeneathPlayer();
     var ground = grounds[0];
     if (ground) {
