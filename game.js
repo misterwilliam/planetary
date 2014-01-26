@@ -53,18 +53,13 @@ Game.prototype.handleInput = function() {
 };
 
 Game.prototype.handleKey = function(event) {
-  var key = '';
-  if (event.which == 87) { // w
-    key = 'jump'
-  } else if (event.which == 83) { // s
-    key = 'down'
-  } else if (event.which == 68) { // d
-    key = 'right'
-  } else if (event.which == 65) { // a
-    key = 'left'
-  } else if (event.which == 32) { // space
-    key = 'mine'
-  }
+  var key = {
+    87: 'jump', // w
+    83: 'down', // s
+    68: 'right', // d
+    65: 'left', // a
+    32: 'mine', // space
+  }[event.which]
 
   if (event.type == 'keydown') {
     if (!this.input[key]) {
