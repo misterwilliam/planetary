@@ -16,24 +16,29 @@ function Game(scene, camera, renderer) {
 };
 
 Game.prototype.handleKeyPress = function(event) {
-  var PLAYER_MAX_SPEED = 20;
+  var PLAYER_MAX_SPEED = 8;
   var PLAYER_ACCELERATION = 2;
   var JUMP_HEIGHT = 10;
 
   if (event.which == 119) {  // w
-    event.data.player.sprite.position.y += JUMP_HEIGHT;
+    event.data.player.jump();
   } else if (event.which == 115) {  // s
     event.data.player.sprite.position.y -= PLAYER_SPEED;
   } else if (event.which == 100) {  // d
-    event.data.player.sprite.position.x += PLAYER_SPEED;
+    event.data.player.speedX += PLAYER_ACCELERATION;
+    event.data.player.speedX = Math.max(
+        event.data.player.speedX, PLAYER_MAX_SPEED);
   } else if (event.which == 97) {  // d
-    event.data.player.sprite.position.x -= PLAYER_SPEED;
+    event.data.player.speedX -= PLAYER_ACCELERATION;
+    event.data.player.speedX = Math.min(
+        event.data.player.speedX, -PLAYER_MAX_SPEED);
   } else if (event.which == 32) { // space
     console.log('space!');
     var grounds = this.getGroundBeneathPlayer();
     var ground = grounds[0];
     if (ground) {
-      this.scene.remove(ground);
+      this.scene.remove(this.grounds[ground]);
+      this.grounds.splice(ground, 1);
     }
   } else {
     console.log('pushed unknown button ', event.which);
@@ -43,45 +48,32 @@ Game.prototype.handleKeyPress = function(event) {
 Game.prototype.getGroundBeneathPlayer = function () {
   var results = [];
   var self = this;
+  var i = 0;
   this.grounds.forEach(function(ground) {
     if ((self.player.sprite.position.x <= ground.position.x) &&
         (self.player.sprite.position.x < ground.position.x + 64)) {
-      results.push(ground);
+      results.push(i);
     }
+    i++;
   });
   return results;
 }
 
 Game.prototype.start = function() {
-  var dudeTexture = THREE.ImageUtils.loadTexture('images/dude.png');
-  var dudeMaterial = new THREE.SpriteMaterial({ map: dudeTexture });
-  var sprite = new THREE.Sprite(dudeMaterial);
-  sprite.position.set(0, 100, 0);
-  sprite.scale.set(4*13, 4*21, 1.0); // imageWidth, imageHeight
-
   this.player = new Player();
   this.scene.add(this.player.sprite);
-
-  var groundTexture = THREE.ImageUtils.loadTexture('images/ground.png');
-  var groundMaterial = new THREE.SpriteMaterial({ map: groundTexture });
-  var plantTexture = THREE.ImageUtils.loadTexture('images/plant.png');
-  var plantMaterial = new THREE.SpriteMaterial({ map: plantTexture });
 
   this.grounds = [];
   for (var i = -30; i < 30; i++) {
     for (var j = 0; j > -6; j--) {
-      var groundSprite = new THREE.Sprite(groundMaterial);
-      groundSprite.position.set(i * 64,-74 + (64 * j),0);
-      groundSprite.scale.set(64, 64, 1.0);
-      this.scene.add(groundSprite);
-      this.grounds.push(groundSprite);
+      var ground = new Ground(i * 64, -74 + (64 * j), 0);
+      this.scene.add(ground.sprite);
+      this.grounds.push(ground.sprite);
     }
 
     if (Math.random() < 0.5) {
-      var plantSprite = new THREE.Sprite(plantMaterial);
-      plantSprite.position.set(i * 64, -10, 0);
-      plantSprite.scale.set(64, 64, 1.0);
-      this.scene.add(plantSprite);
+      var plant = new Plant(i * 64, -10, 0);
+      this.scene.add(plant.sprite);
     }
   }
 
