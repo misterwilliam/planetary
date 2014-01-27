@@ -9,10 +9,6 @@ function Player () {
 };
 
 Player.prototype.tick = function() {
-  // Gravity on player
-  if (this.sprite.position.y > 0) {
-    this.sprite.position.y -= 1;
-  }
 
   // apply speed to position
   this.sprite.position.x += this.speedX;

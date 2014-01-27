@@ -145,12 +145,27 @@ Game.prototype.render = function() {
   this.renderer.render(this.scene, this.camera);
 }
 
+Game.prototype.onGround = function() {
+  var ground = this.getGroundBeneathPlayer();
+  if (!ground) {
+    return false;
+  }
+
+  ground = game.terrainGrid[ground];
+  return this.player.sprite.position.y - (ground.sprite.position.y + 74) < 1;
+}
+
 var tickCount = 0;
 // Single tick of game time (1 frame)
 Game.prototype.tick = function() {
+  // Gravity on player
+  if (!this.onGround()) {
+    this.player.sprite.position.y -= 1;
+  }
+
   tickCount ++;
   if (tickCount % 60 == 0) {
-    // console.log(this.input);
+    // console.log(this.onGround())
   }
   this.handleInput();
   this.player.tick();
