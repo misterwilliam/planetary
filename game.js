@@ -45,7 +45,7 @@ Game.prototype.handleInput = function() {
 
   if (this.input.mine) {
     var now = getNow();
-    if (now - 1000 < this.lastMined) {
+    if (now - 650 < this.lastMined) {
       return;
     }
     this.lastMined = now;
