@@ -47,3 +47,8 @@ Ground.prototype.beDry = function() {
 Ground.prototype.beWet = function() {
   this.sprite.material = WET_MATERIAL;
 };
+
+Ground.prototype.hit = function() {
+  game.scene.remove(this.sprite);
+  delete game.terrainGrid[[this.x, this.y]];
+};
