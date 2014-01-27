@@ -51,7 +51,7 @@ Game.prototype.handleInput = function() {
     }
     this.lastMined = now;
 
-    var groundCoord = this.getGroundBeneathPlayer();
+    var groundCoord = this.getGroundBeneath(this.player.sprite);
     if (groundCoord) {
       var ground = this.terrainGrid[[groundCoord[0], groundCoord[1]]];
       this.scene.remove(ground.sprite);
@@ -88,9 +88,9 @@ Game.prototype.displayToGrid = function(x, y) {
   return [Math.floor(x / 64), Math.floor(y / 64)];
 };
 
-Game.prototype.getGroundBeneathPlayer = function () {
-  var coords = this.displayToGrid(this.player.sprite.position.x,
-                                  this.player.sprite.position.y);
+Game.prototype.getGroundBeneath = function (sprite) {
+  var coords = this.displayToGrid(sprite.position.x,
+                                  sprite.position.y);
 
   var height = coords[1];
   while (!([coords[0], height] in this.terrainGrid)) {
@@ -103,7 +103,7 @@ Game.prototype.getGroundBeneathPlayer = function () {
 }
 
 Game.prototype.start = function() {
-  this.player = new Player();
+  this.player = new Player(this);
   this.addEntity(this.player);
 
   for (var i = -30; i < 30; i++) {
@@ -145,24 +145,19 @@ Game.prototype.render = function() {
   this.renderer.render(this.scene, this.camera);
 }
 
-Game.prototype.onGround = function() {
-  var ground = this.getGroundBeneathPlayer();
+Game.prototype.onGround = function(sprite) {
+  var ground = this.getGroundBeneath(sprite);
   if (!ground) {
     return false;
   }
 
   ground = game.terrainGrid[ground];
-  return this.player.sprite.position.y - (ground.sprite.position.y + 74) < 1;
+  return sprite.position.y - (ground.sprite.position.y + 74) < 1;
 }
 
 var tickCount = 0;
 // Single tick of game time (1 frame)
 Game.prototype.tick = function() {
-  // Gravity on player
-  if (!this.onGround()) {
-    this.player.sprite.position.y -= 1;
-  }
-
   tickCount ++;
   if (tickCount % 60 == 0) {
     // console.log(this.onGround())
