@@ -31,7 +31,7 @@ Game.prototype.handleInput = function() {
   if (this.input.jump) {
     this.player.jump();
   } else if (this.input.down) {
-    this.player.sprite.position.y -= 10;
+    // do nothing
   }
 
   if (this.input.right) {
