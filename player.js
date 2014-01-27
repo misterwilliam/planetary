@@ -1,13 +1,24 @@
+
+var DUDE_MATERIAL = new THREE.SpriteMaterial({
+  map: THREE.ImageUtils.loadTexture('images/dude.png')
+});
+
+var FLASH_MATERIAL = new THREE.SpriteMaterial({
+  map: THREE.ImageUtils.loadTexture('images/flash.png')
+});
+
 function Player (game) {
-  var dudeTexture = THREE.ImageUtils.loadTexture('images/dude.png');
-  var dudeMaterial = new THREE.SpriteMaterial({ map: dudeTexture });
   this.speedX = -6;
   this.speedY = 3
-  this.sprite = new THREE.Sprite(dudeMaterial);
+  this.sprite = new THREE.Sprite(DUDE_MATERIAL);
   this.sprite.position.set(0, 100, 0);
   this.sprite.scale.set(4*13, 4*21, 1.0); // imageWidth, imageHeight
   this.direction = -1;
   this.game = game;
+  this.lastDig = -10000;
+
+  this.flashSprite = new THREE.Sprite(FLASH_MATERIAL);
+  this.flashSprite.scale.set(4*13, 4*21, 1.0); // imageWidth, imageHeight
 };
 
 Player.prototype.tick = function() {
@@ -20,9 +31,9 @@ Player.prototype.tick = function() {
   // apply speed to position
   this.sprite.position.x += this.speedX;
 
-  var groundBeneath = this.game.terrainGrid[this.game.getGroundBeneathEntity(this)];
+  var groundBeneath = this.game.getGroundBeneathEntity(this);
   this.sprite.position.y += this.speedY;
-  var newGroundBeneath = this.game.terrainGrid[this.game.getGroundBeneathEntity(this)];
+  var newGroundBeneath = this.game.getGroundBeneathEntity(this);
   if (groundBeneath != newGroundBeneath) {
     // collide with old ground beneath
     // we went through groundBeneith, so reset our height to be its.
@@ -49,5 +60,27 @@ Player.prototype.tick = function() {
 Player.prototype.jump = function() {
   if (this.game.onGround(this)) {
     this.speedY = 8;
+  }
+};
+
+Player.prototype.dig = function() {
+  var now = getNow();
+  if (now - 650 < this.lastDig) {
+    return;
+  }
+  this.lastDig = now;
+
+  var flashSprite = this.flashSprite;
+  flashSprite.position.set(this.sprite.position.x,
+                           this.sprite.position.y - 30,
+                           1);
+  game.scene.add(flashSprite);
+  setTimeout(function() {
+    game.scene.remove(flashSprite);
+  }, 100);
+
+  var ground = this.game.getGroundBeneathEntity(this);
+  if (ground) {
+    ground.hit();
   }
 };

@@ -18,10 +18,9 @@ function Game(scene, camera, renderer) {
 
   this.now = getNow();
   this.lastTime = getNow();
-  this.lastMined = -10000;
   this.unprocessedFrames = 0;
   this.input = {
-    jump: false, down: false, right: false, left: false, mine:false
+    jump: false, down: false, right: false, left: false, dig:false
   };
 
   this.lastEntityId = -1;
@@ -46,29 +45,8 @@ Game.prototype.handleInput = function() {
         this.player.speedX, -PLAYER_MAX_SPEED);
   }
 
-  if (this.input.mine) {
-    var now = getNow();
-    if (now - 650 < this.lastMined) {
-      return;
-    }
-    this.lastMined = now;
-
-    var groundCoord = this.getGroundBeneathEntity(this.player);
-    if (groundCoord) {
-      var ground = this.terrainGrid[groundCoord];
-      this.scene.remove(ground.sprite);
-      delete this.terrainGrid[[groundCoord[0], groundCoord[1]]];
-
-      var self = this;
-      this.entities.forEach(function(plant) {
-        if (plant.constructor != Plant) {
-          return;
-        }
-        if (plant.x == groundCoord[0] && plant.y == groundCoord[1] + 1) {
-          self.removeEntity(plant);
-        }
-      });
-    }
+  if (this.input.dig) {
+    this.player.dig();
   }
 };
 
@@ -78,7 +56,7 @@ Game.prototype.handleKey = function(event) {
     83: 'down', // s
     68: 'right', // d
     65: 'left', // a
-    32: 'mine', // space
+    32: 'dig', // space
   }[event.which]
 
   if (event.type == 'keydown') {
@@ -118,8 +96,8 @@ Game.prototype.getGroundBeneathEntity = function (entity) {
     }
     height -= 1;
   }
-  return [coords[0], height];
-}
+  return this.terrainGrid[[coords[0], height]];
+};
 
 Game.prototype.neighbors = function(entity) {
   var coords = this.displayToGrid(entity.sprite.position.x,
@@ -188,8 +166,6 @@ Game.prototype.onGround = function(entity) {
   if (!ground) {
     return false;
   }
-
-  ground = game.terrainGrid[ground];
   return entity.sprite.position.y - (ground.sprite.position.y + 74) < 1;
 }
 

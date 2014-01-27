@@ -47,3 +47,18 @@ Ground.prototype.beDry = function() {
 Ground.prototype.beWet = function() {
   this.sprite.material = WET_MATERIAL;
 };
+
+Ground.prototype.hit = function() {
+  var self = this;
+  game.entities.forEach(function(plant) {
+    if (plant.constructor != Plant) {
+      return;
+    }
+    if (plant.x == self.x && plant.y == self.y + 1) {
+      game.removeEntity(plant);
+    }
+  });
+
+  game.scene.remove(this.sprite);
+  delete game.terrainGrid[[this.x, this.y]];
+};
