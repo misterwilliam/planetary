@@ -2,7 +2,7 @@ var PLAYER_MAX_SPEED = 8;
 var PLAYER_ACCELERATION = 0.001;
 var JUMP_HEIGHT = 10;
 var MAX_DEPTH = -6;
-
+var MAX_CATCHUP = 10;
 
 var getNow = (function() {
   if (window.performance && window.performance.now) {
@@ -24,6 +24,8 @@ function Game(scene, camera, renderer) {
     jump: false, down: false, right: false, left: false, mine:false
   };
 
+  this.lastEntityId = -1;
+  this.entities = [];
   this.terrainGrid = {};
 };
 
@@ -51,7 +53,7 @@ Game.prototype.handleInput = function() {
     }
     this.lastMined = now;
 
-    var groundCoord = this.getGroundBeneath(this.player.sprite);
+    var groundCoord = this.getGroundBeneathEntity(this.player);
     if (groundCoord) {
       var ground = this.terrainGrid[[groundCoord[0], groundCoord[1]]];
       this.scene.remove(ground.sprite);
@@ -77,7 +79,14 @@ Game.prototype.handleKey = function(event) {
 }
 
 Game.prototype.addEntity = function(entity) {
+  entity.id = ++this.lastEntityId;
+  this.entities[entity.id] = entity;
   this.scene.add(entity.sprite);
+};
+
+Game.prototype.removeEntity = function(entity) {
+  this.scene.remove(entity.sprite);
+  delete this.entities[entity.id];
 };
 
 Game.prototype.gridToDisplay = function(x, y) {
@@ -88,11 +97,11 @@ Game.prototype.displayToGrid = function(x, y) {
   return [Math.floor(x / 64), Math.floor(y / 64)];
 };
 
-Game.prototype.getGroundBeneath = function (sprite) {
-  var coords = this.displayToGrid(sprite.position.x,
-                                  sprite.position.y);
+Game.prototype.getGroundBeneathEntity = function (entity) {
+  var coords = this.displayToGrid(entity.sprite.position.x,
+                                  entity.sprite.position.y);
 
-  var height = coords[1];
+  var height = coords[1]-1;
   while (!([coords[0], height] in this.terrainGrid)) {
     if (height <= MAX_DEPTH) {
       return null;
@@ -102,19 +111,36 @@ Game.prototype.getGroundBeneath = function (sprite) {
   return [coords[0], height];
 }
 
+Game.prototype.neighbors = function(entity) {
+  var coords = this.displayToGrid(entity.sprite.position.x,
+                                  entity.sprite.position.y);
+  var x = coords[0];
+  var y = coords[1];
+  return [
+    [x + 1, y + 1],
+    [x + 1, y - 1],
+    [x + 1, y],
+    [x - 1, y + 1],
+    [x - 1, y - 1],
+    [x - 1, y],
+    [x,     y + 1],
+    [x,     y - 1],
+  ];
+};
+
 Game.prototype.start = function() {
   this.player = new Player(this);
   this.addEntity(this.player);
 
-  for (var i = -30; i < 30; i++) {
-    for (var j = 0; j > -6; j--) {
-      var ground = new Ground(i, j);
-      this.terrainGrid[[ground.x, ground.y]] = ground;
+  for (var x = -30; x < 30; x++) {
+    for (var y = -1; y > -6; y--) {
+      var ground = new Ground(x, y);
+      this.terrainGrid[[x, y]] = ground;
       this.addEntity(ground);
     }
 
     if (Math.random() < 0.5) {
-      var plant = new Plant(i * 64, -10, 0);
+      var plant = new Plant(x, 0);
       this.addEntity(plant);
     }
   }
@@ -129,10 +155,10 @@ Game.prototype.animate = function() {
   this.now = getNow();
   this.unprocessedFrames += (this.now - this.lastTime) * 60.0 / 1000.0; // 60 fps
   this.lastTime = this.now;
-  if (this.unprocessedFrames > 10.0) {
-    this.unprocessedFrames = 10.0;
+  if (this.unprocessedFrames > MAX_CATCHUP) {
+    this.unprocessedFrames = MAX_CATCHUP;
   }
-  while (this.unprocessedFrames > 1.0) {
+  while (this.unprocessedFrames >= 1.0) {
     this.tick();
     this.unprocessedFrames -= 1.0;
   }
@@ -145,14 +171,14 @@ Game.prototype.render = function() {
   this.renderer.render(this.scene, this.camera);
 }
 
-Game.prototype.onGround = function(sprite) {
-  var ground = this.getGroundBeneath(sprite);
+Game.prototype.onGround = function(entity) {
+  var ground = this.getGroundBeneathEntity(entity);
   if (!ground) {
     return false;
   }
 
   ground = game.terrainGrid[ground];
-  return sprite.position.y - (ground.sprite.position.y + 74) < 1;
+  return entity.sprite.position.y - (ground.sprite.position.y + 74) < 1;
 }
 
 var tickCount = 0;
@@ -163,7 +189,9 @@ Game.prototype.tick = function() {
     // console.log(this.onGround())
   }
   this.handleInput();
-  this.player.tick();
+  for (var id in this.entities) {
+    this.entities[id].tick();
+  }
   for (var coords in this.terrainGrid) {
     this.terrainGrid[coords].tick();
   }

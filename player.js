@@ -12,7 +12,7 @@ function Player (game) {
 
 Player.prototype.tick = function() {
   // Gravity on player
-  if (!this.game.onGround(this.sprite)) {
+  if (!this.game.onGround(this)) {
     this.speedY -= 0.3;
   }
 
@@ -20,12 +20,13 @@ Player.prototype.tick = function() {
   // apply speed to position
   this.sprite.position.x += this.speedX;
 
-  var groundBeneath = this.game.terrainGrid[this.game.getGroundBeneath(this.sprite)];
+  var groundBeneath = this.game.terrainGrid[this.game.getGroundBeneathEntity(this)];
   this.sprite.position.y += this.speedY;
-  var newGroundBeneath = this.game.terrainGrid[this.game.getGroundBeneath(this.sprite)];
+  var newGroundBeneath = this.game.terrainGrid[this.game.getGroundBeneathEntity(this)];
   if (groundBeneath != newGroundBeneath) {
     // collide with old ground beneath
     this.sprite.position.y = Math.max(groundBeneath.sprite.position.y, newGroundBeneath.sprite.position.y) + 74;
+    this.speedY = 0;
   }
 
   // facing
@@ -45,7 +46,7 @@ Player.prototype.tick = function() {
 };
 
 Player.prototype.jump = function() {
-  if (this.game.onGround(this.sprite)) {
+  if (this.game.onGround(this)) {
     this.speedY = 8;
   }
 };
