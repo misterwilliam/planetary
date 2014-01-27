@@ -172,7 +172,7 @@ Game.prototype.render = function() {
 }
 
 Game.prototype.onGround = function() {
-  var ground = this.getGroundBeneathPlayer();
+  var ground = this.getGroundBeneathEntity(this.player);
   if (!ground) {
     return false;
   }
