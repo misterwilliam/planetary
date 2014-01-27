@@ -11,22 +11,19 @@ function Ground(x, y) {
   this.x = x;
   this.y = y;
   this.sprite = new THREE.Sprite(DRY_MATERIAL);
-  this.sprite.position.set(x * 64, -74 + (64 * y), 0);
+  this.sprite.position.set(x * 64, 64 * y, 0);
   this.sprite.scale.set(64, 64, 1.0);
 
   this.waterLevel = 0;
-  this.t = 0;
 };
 
 Ground.prototype.tick = function() {
-  if (++this.t >= 6000) {
-    this.t = 0;
-    if (this.sprite.material == DRY_MATERIAL) {
-      this.beWet();
-    } else {
-    	this.beDry();
-    }
-    this.t = 0;
+};
+
+Ground.prototype.water = function(amt) {
+  this.waterLevel += amt;
+  if (this.waterLevel >= 100) {
+    this.beWet();
   }
 };
 

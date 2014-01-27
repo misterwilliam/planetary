@@ -24,6 +24,8 @@ function Game(scene, camera, renderer) {
     jump: false, down: false, right: false, left: false, mine:false
   };
 
+  this.lastEntityId = -1;
+  this.entities = [];
   this.terrainGrid = {};
 };
 
@@ -51,7 +53,7 @@ Game.prototype.handleInput = function() {
     }
     this.lastMined = now;
 
-    var groundCoord = this.getGroundBeneathPlayer();
+    var groundCoord = this.getGroundBeneathEntity(this.player);
     if (groundCoord) {
       var ground = this.terrainGrid[[groundCoord[0], groundCoord[1]]];
       this.scene.remove(ground.sprite);
@@ -77,7 +79,14 @@ Game.prototype.handleKey = function(event) {
 }
 
 Game.prototype.addEntity = function(entity) {
+  entity.id = ++this.lastEntityId;
+  this.entities[entity.id] = entity;
   this.scene.add(entity.sprite);
+};
+
+Game.prototype.removeEntity = function(entity) {
+  this.scene.remove(entity.sprite);
+  delete this.entities[entity.id];
 };
 
 Game.prototype.gridToDisplay = function(x, y) {
@@ -88,9 +97,9 @@ Game.prototype.displayToGrid = function(x, y) {
   return [Math.floor(x / 64), Math.floor(y / 64)];
 };
 
-Game.prototype.getGroundBeneathPlayer = function () {
-  var coords = this.displayToGrid(this.player.sprite.position.x,
-                                  this.player.sprite.position.y);
+Game.prototype.getGroundBeneathEntity = function (entity) {
+  var coords = this.displayToGrid(entity.sprite.position.x,
+                                  entity.sprite.position.y);
 
   var height = coords[1];
   while (!([coords[0], height] in this.terrainGrid)) {
@@ -102,19 +111,37 @@ Game.prototype.getGroundBeneathPlayer = function () {
   return [coords[0], height];
 }
 
+Game.prototype.neighbors = function(entity) {
+  var coords = this.displayToGrid(entity.sprite.position.x,
+                                  entity.sprite.position.y);
+  var x = coords[0];
+  var y = coords[1];
+  return [
+    [x + 1, y + 1],
+    [x + 1, y - 1],
+    [x + 1, y],
+    [x - 1, y + 1],
+    [x - 1, y - 1],
+    [x - 1, y],
+    [x,     y + 1],
+    [x,     y - 1],
+  ];
+};
+
 Game.prototype.start = function() {
   this.player = new Player();
   this.addEntity(this.player);
 
-  for (var i = -30; i < 30; i++) {
-    for (var j = 0; j > -6; j--) {
-      var ground = new Ground(i, j);
-      this.terrainGrid[[ground.x, ground.y]] = ground;
+  for (var x = -30; x < 30; x++) {
+    for (var y = -1; y > -6; y--) {
+      var ground = new Ground(x, y);
+      this.terrainGrid[[x, y]] = ground;
       this.addEntity(ground);
     }
 
-    if (Math.random() < 0.5) {
-      var plant = new Plant(i * 64, -10, 0);
+    // if (Math.random() < 0.5) {
+    if (x == 0 || x == 1) {
+      var plant = new Plant(x, 0);
       this.addEntity(plant);
     }
   }
@@ -153,7 +180,9 @@ Game.prototype.tick = function() {
     // console.log(this.input);
   }
   this.handleInput();
-  this.player.tick();
+  for (var id in this.entities) {
+    this.entities[id].tick();
+  }
   for (var coords in this.terrainGrid) {
     this.terrainGrid[coords].tick();
   }
