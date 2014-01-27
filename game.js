@@ -55,9 +55,19 @@ Game.prototype.handleInput = function() {
 
     var groundCoord = this.getGroundBeneathEntity(this.player);
     if (groundCoord) {
-      var ground = this.terrainGrid[[groundCoord[0], groundCoord[1]]];
+      var ground = this.terrainGrid[groundCoord];
       this.scene.remove(ground.sprite);
       delete this.terrainGrid[[groundCoord[0], groundCoord[1]]];
+
+      var self = this;
+      this.entities.forEach(function(plant) {
+        if (plant.constructor != Plant) {
+          return;
+        }
+        if (plant.x == groundCoord[0] && plant.y == groundCoord[1] + 1) {
+          self.removeEntity(plant);
+        }
+      });
     }
   }
 };
@@ -132,6 +142,7 @@ Game.prototype.start = function() {
   this.player = new Player(this);
   this.addEntity(this.player);
 
+  this.plants = [];
   for (var x = -30; x < 30; x++) {
     for (var y = -1; y > -6; y--) {
       var ground = new Ground(x, y);
@@ -142,6 +153,7 @@ Game.prototype.start = function() {
     if (Math.random() < 0.5) {
       var plant = new Plant(x, 0);
       this.addEntity(plant);
+      this.plants.push(plant);
     }
   }
 

@@ -25,6 +25,7 @@ Player.prototype.tick = function() {
   var newGroundBeneath = this.game.terrainGrid[this.game.getGroundBeneathEntity(this)];
   if (groundBeneath != newGroundBeneath) {
     // collide with old ground beneath
+    // we went through groundBeneith, so reset our height to be its.
     this.sprite.position.y = Math.max(groundBeneath.sprite.position.y, newGroundBeneath.sprite.position.y) + 74;
     this.speedY = 0;
   }

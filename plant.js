@@ -53,3 +53,4 @@ Plant.prototype.decay = function(amt) {
     this.sprite.material = BROWN_MATERIAL;
   }
 };
+
