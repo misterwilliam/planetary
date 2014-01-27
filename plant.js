@@ -24,7 +24,7 @@ Plant.prototype.dropWater = function() {
     var y = coord[1];
     ground = game.terrainGrid[[x,y]];
     if (ground) {
-      ground.water(50);
+      ground.water(20);
     }
   });
 };

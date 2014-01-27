@@ -139,8 +139,7 @@ Game.prototype.start = function() {
       this.addEntity(ground);
     }
 
-    // if (Math.random() < 0.5) {
-    if (x == 0 || x == 1) {
+    if (Math.random() < 0.5) {
       var plant = new Plant(x, 0);
       this.addEntity(plant);
     }
