@@ -22,11 +22,20 @@ function Player (game) {
 };
 
 Player.prototype.tick = function() {
+  // Move camera with player
+  if (this.sprite.position.x - this.game.camera.position.x > 300) {
+    // Pan right with player
+    this.game.camera.position.x += Math.abs(this.speedX);
+  } else if (this.sprite.position.x - this.game.camera.position.x < -300) {
+    // Pan left with player
+    console.log("left");
+    this.game.camera.position.x -= Math.abs(this.speedX);
+  }
+
   // Gravity on player
   if (!this.game.onGround(this)) {
     this.speedY -= 0.3;
   }
-
 
   // apply speed to position
   this.sprite.position.x += this.speedX;

@@ -190,7 +190,7 @@ $(document).ready(function(){
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(90,
           window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 0, 400);
+  camera.position.set(0, 0, 800);
 
   var renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
