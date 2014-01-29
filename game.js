@@ -126,8 +126,8 @@ Game.prototype.start = function() {
   });
   for (var x = -30; x < 30; x++) {
     var background_sprite = new THREE.Sprite(BACKGROUND_MATERIAL);
-    background_sprite.position.set(x* 640, 250, -1);
-    background_sprite.scale.set(640, 640, 1.0); // imageWidth, imageHeight
+    background_sprite.position.set(x * 640 * 2, 640 - 100, -1);
+    background_sprite.scale.set(640*2, 640*2, 1.0); // imageWidth, imageHeight
     this.scene.add(background_sprite);
   }
 
