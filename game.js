@@ -120,6 +120,17 @@ Game.prototype.start = function() {
   this.player = new Player(this);
   this.addEntity(this.player);
 
+  // Add background
+  var BACKGROUND_MATERIAL = new THREE.SpriteMaterial({
+    map: THREE.ImageUtils.loadTexture('images/mountains.png')
+  });
+  for (var x = -30; x < 30; x++) {
+    var background_sprite = new THREE.Sprite(BACKGROUND_MATERIAL);
+    background_sprite.position.set(x* 640, 250, -1);
+    background_sprite.scale.set(640, 640, 1.0); // imageWidth, imageHeight
+    this.scene.add(background_sprite);
+  }
+
   this.plants = [];
   for (var x = -30; x < 30; x++) {
     for (var y = -1; y > -6; y--) {
