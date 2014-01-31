@@ -11,10 +11,14 @@ var getNow = (function() {
   return function(){return +new Date()};
 })();
 
-function Game(scene, camera, renderer) {
-  this.scene = scene;
-  this.camera = camera;
-  this.renderer = renderer;
+function Game() {
+  this.scene = new THREE.Scene();
+  this.camera = new THREE.PerspectiveCamera(
+    90, window.innerWidth/window.innerHeight, 0.1, 1000);
+  this.camera.position.set(0, 0, 800);
+  this.renderer = new THREE.WebGLRenderer();
+  this.renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(this.renderer.domElement);
 
   this.now = getNow();
   this.lastTime = getNow();
@@ -52,11 +56,11 @@ Game.prototype.handleInput = function() {
 
 Game.prototype.handleKey = function(event) {
   var key = {
-    87: 'jump', // w
-    83: 'down', // s
+    87: 'jump',  // w
+    83: 'down',  // s
     68: 'right', // d
-    65: 'left', // a
-    32: 'dig', // space
+    65: 'left',  // a
+    32: 'dig',   // space
   }[event.which]
 
   if (event.type == 'keydown') {
@@ -146,11 +150,11 @@ Game.prototype.start = function() {
     }
   }
 
-  $(document).on("keydown", this, this.handleKey.bind(this));
-  $(document).on("keyup", this, this.handleKey.bind(this));
+  window.addEventListener('keydown', this.handleKey.bind(this));
+  window.addEventListener('keyup', this.handleKey.bind(this));
   requestAnimationFrame(this.animate.bind(this));
-
 }
+
 // Called when when we are allowed to render. In general at 60 fps.
 Game.prototype.animate = function() {
   this.now = getNow();
@@ -170,7 +174,7 @@ Game.prototype.animate = function() {
 // Renders a single frame
 Game.prototype.render = function() {
   this.renderer.render(this.scene, this.camera);
-}
+};
 
 Game.prototype.onGround = function(entity) {
   var ground = this.getGroundBeneathEntity(entity);
@@ -178,7 +182,7 @@ Game.prototype.onGround = function(entity) {
     return false;
   }
   return entity.sprite.position.y - (ground.sprite.position.y + 74) < 1;
-}
+};
 
 var tickCount = 0;
 // Single tick of game time (1 frame)
@@ -194,19 +198,4 @@ Game.prototype.tick = function() {
   for (var coords in this.terrainGrid) {
     this.terrainGrid[coords].tick();
   }
-}
-
-var game; // globally visible for debugging;
-$(document).ready(function(){
-  var scene = new THREE.Scene();
-  var camera = new THREE.PerspectiveCamera(90,
-          window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 0, 800);
-
-  var renderer = new THREE.WebGLRenderer();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
-
-  game = new Game(scene, camera, renderer);
-  game.start();
-});
+};

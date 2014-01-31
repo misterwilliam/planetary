@@ -7,12 +7,20 @@
     </style>
   </head>
   <body>
-    <script src="lib/jquery.js"></script>
     <script src="lib/three.js"></script>
+
     <script src="game.js"></script>
     <script src="player.js"></script>
     <script src="plant.js"></script>
     <script src="ground.js"></script>
+
+    <script>
+      var game;
+      window.addEventListener('load', function() {
+        game = new Game();
+        game.start();
+      });
+    </script>
 
     <script src="lib/live.js"></script>
   </body>
