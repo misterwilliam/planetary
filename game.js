@@ -3,6 +3,7 @@ var PLAYER_ACCELERATION = 0.001;
 var JUMP_HEIGHT = 10;
 var MAX_DEPTH = -6;
 var MAX_CATCHUP = 10;
+var BLOCK_SIZE = 64;
 
 var getNow = (function() {
   if (window.performance && window.performance.now) {
@@ -82,11 +83,11 @@ Game.prototype.removeEntity = function(entity) {
 };
 
 Game.prototype.gridToDisplay = function(x, y) {
-  return [x * 64, y * 64];
+  return [x * BLOCK_SIZE, y * BLOCK_SIZE];
 };
 
 Game.prototype.displayToGrid = function(x, y) {
-  return [Math.floor(x / 64), Math.floor(y / 64)];
+  return [Math.floor(x / BLOCK_SIZE), Math.floor(y / BLOCK_SIZE)];
 };
 
 Game.prototype.getGroundBeneathEntity = function (entity) {
@@ -130,7 +131,7 @@ Game.prototype.start = function() {
   });
   for (var x = -30; x < 30; x++) {
     var background_sprite = new THREE.Sprite(BACKGROUND_MATERIAL);
-    background_sprite.position.set(x * 640 * 2, 640 - 100, -1);
+    background_sprite.position.set(x * 640 * 2, 640 - 100, -200);
     background_sprite.scale.set(640*2, 640*2, 1.0); // imageWidth, imageHeight
     this.scene.add(background_sprite);
   }

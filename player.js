@@ -34,7 +34,7 @@ Player.prototype.tick = function() {
 
   // Gravity on player
   if (!this.game.onGround(this)) {
-    this.speedY -= 0.3;
+    this.speedY -= 0.7;
   }
 
   // apply speed to position
@@ -59,7 +59,7 @@ Player.prototype.tick = function() {
 
   // friction
   if (this.speedX) {
-    this.speedX *= 0.97;
+    this.speedX *= 0.92;
     if (Math.abs(this.speedX) < 0.50) {
       this.speedX = 0;
     }
@@ -68,7 +68,7 @@ Player.prototype.tick = function() {
 
 Player.prototype.jump = function() {
   if (this.game.onGround(this)) {
-    this.speedY = 8;
+    this.speedY = 13;
   }
 };
 
