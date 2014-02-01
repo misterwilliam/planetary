@@ -14,11 +14,10 @@ var getNow = (function() {
 
 function Game() {
   this.scene = new THREE.Scene();
-  this.camera = new THREE.PerspectiveCamera(
-    90, window.innerWidth/window.innerHeight, 0.1, 1000);
+  this.camera = new THREE.PerspectiveCamera(90, null, 0.1, 1000);
   this.camera.position.set(0, 0, 800);
   this.renderer = new THREE.WebGLRenderer();
-  this.renderer.setSize(window.innerWidth, window.innerHeight);
+  this.resize();
   document.body.appendChild(this.renderer.domElement);
 
   this.now = getNow();
@@ -32,6 +31,12 @@ function Game() {
   this.entities = [];
   this.terrainGrid = {};
   this.drawDebug();
+};
+
+Game.prototype.resize = function() {
+  this.camera.aspect = window.innerWidth / window.innerHeight;
+  this.camera.updateProjectionMatrix();
+  this.renderer.setSize(window.innerWidth, window.innerHeight);
 };
 
 Game.prototype.handleInput = function() {
@@ -156,6 +161,7 @@ Game.prototype.start = function() {
   window.addEventListener('keydown', this.handleKey.bind(this));
   window.addEventListener('keyup', this.handleKey.bind(this));
   window.addEventListener('blur', this.clearInput.bind(this));
+  window.addEventListener('resize', this.resize.bind(this));
 
   requestAnimationFrame(this.animate.bind(this));
 }
