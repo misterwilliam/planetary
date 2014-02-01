@@ -77,7 +77,14 @@ Game.prototype.handleKey = function(event) {
       this.drawDebug();
     }
   }
-}
+};
+
+Game.prototype.clearInput = function() {
+  console.log('clearing input');
+  for (var key in this.input) {
+    this.input[key] = false;
+  }
+};
 
 Game.prototype.addEntity = function(entity) {
   entity.id = ++this.lastEntityId;
@@ -148,6 +155,8 @@ Game.prototype.start = function() {
 
   window.addEventListener('keydown', this.handleKey.bind(this));
   window.addEventListener('keyup', this.handleKey.bind(this));
+  window.addEventListener('blur', this.clearInput.bind(this));
+
   requestAnimationFrame(this.animate.bind(this));
 }
 
