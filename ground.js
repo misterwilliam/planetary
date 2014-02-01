@@ -11,7 +11,10 @@ function Ground(x, y) {
   this.x = x;
   this.y = y;
   this.sprite = new THREE.Sprite(DRY_MATERIAL);
-  this.sprite.position.set(x * BLOCK_SIZE, BLOCK_SIZE * y, 0);
+  this.sprite.position.set(
+    x * BLOCK_SIZE + BLOCK_SIZE / 2,
+    y * BLOCK_SIZE + BLOCK_SIZE / 2,
+    0);
   this.sprite.scale.set(BLOCK_SIZE, BLOCK_SIZE, 1.0);
 
   this.waterLevel = 0;

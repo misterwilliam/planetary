@@ -15,7 +15,10 @@ function Plant(x, y) {
   this.x = x;
   this.y = y;
   this.sprite = new THREE.Sprite(GREEN_MATERIAL);
-  this.sprite.position.set(x * 64, y * 64, 0);
+  this.sprite.position.set(
+    x * BLOCK_SIZE + BLOCK_SIZE / 2,
+    y * BLOCK_SIZE + BLOCK_SIZE / 2,
+    0);
   this.sprite.scale.set(64, 64, 1.0);
   this.ticksSinceLastDrop = 0;
   this.ticksSinceLastDecay = 0;

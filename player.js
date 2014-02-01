@@ -28,7 +28,6 @@ Player.prototype.tick = function() {
     this.game.camera.position.x += Math.abs(this.speedX);
   } else if (this.sprite.position.x - this.game.camera.position.x < -300) {
     // Pan left with player
-    console.log("left");
     this.game.camera.position.x -= Math.abs(this.speedX);
   }
 
