@@ -1,15 +1,7 @@
 
-var GREEN_MATERIAL = new THREE.SpriteMaterial({
-  map: THREE.ImageUtils.loadTexture('images/plant.png')
-});
-
-var BROWN_MATERIAL = new THREE.SpriteMaterial({
-  map: THREE.ImageUtils.loadTexture('images/plant-brown.png')
-});
-
-var BLACK_MATERIAL = new THREE.SpriteMaterial({
-  map: THREE.ImageUtils.loadTexture('images/plant-black.png')
-});
+var GREEN_MATERIAL = LoadJaggyMaterial('images/plant.png');
+var BROWN_MATERIAL = LoadJaggyMaterial('images/plant-brown.png');
+var BLACK_MATERIAL = LoadJaggyMaterial('images/plant-black.png');
 
 function Plant(x, y) {
   this.x = x;

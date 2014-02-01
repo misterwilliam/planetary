@@ -1,11 +1,5 @@
-
-var DUDE_MATERIAL = new THREE.SpriteMaterial({
-  map: THREE.ImageUtils.loadTexture('images/dude.png')
-});
-
-var FLASH_MATERIAL = new THREE.SpriteMaterial({
-  map: THREE.ImageUtils.loadTexture('images/flash.png')
-});
+var DUDE_MATERIAL = LoadJaggyMaterial('images/dude.png');
+var FLASH_MATERIAL = LoadJaggyMaterial('images/flash.png')
 
 function Player (game) {
   this.speedX = -6;

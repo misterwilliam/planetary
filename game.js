@@ -12,6 +12,14 @@ var getNow = (function() {
   return function(){return +new Date()};
 })();
 
+// Creates a new SpriteMaterial with nearest-neighbor texture filtering from
+// image URL.
+function LoadJaggyMaterial(url) {
+  var texture = THREE.ImageUtils.loadTexture(url);
+  texture.magFilter = texture.minFilter = THREE.NearestFilter;
+  return new THREE.SpriteMaterial({map: texture});
+};
+
 function Game() {
   this.scene = new THREE.Scene();
   this.camera = new THREE.PerspectiveCamera(90, null, 0.1, 1000);
@@ -146,9 +154,7 @@ Game.prototype.start = function() {
   this.addEntity(this.player);
 
   // Add background
-  var BACKGROUND_MATERIAL = new THREE.SpriteMaterial({
-    map: THREE.ImageUtils.loadTexture('images/mountains.png')
-  });
+  var BACKGROUND_MATERIAL = LoadJaggyMaterial('images/mountains.png');
   for (var x = -30; x < 30; x++) {
     var background_sprite = new THREE.Sprite(BACKGROUND_MATERIAL);
     background_sprite.position.set(x * 640 * 2, 640 - 100, -200);
