@@ -193,13 +193,26 @@ Game.prototype.start = function() {
   this.addEntity(this.player);
 
   // Add background
-  var BACKGROUND_MATERIAL = LoadJaggyMaterial('images/mountains.png');
+  var BACKGROUND_TEXTURE = THREE.ImageUtils.loadTexture("images/mountains.png");
+  var BACKGROUND_MATERIAL = new THREE.MeshBasicMaterial({map: BACKGROUND_TEXTURE});
   for (var x = -30; x < 30; x++) {
-    var background_sprite = new THREE.Sprite(BACKGROUND_MATERIAL);
-    background_sprite.position.set(x * 640 * 2, 640 - 100, -200);
-    background_sprite.scale.set(640*2, 640*2, 1.0); // imageWidth, imageHeight
-    this.scene.add(background_sprite);
+    var meshBg = new THREE.Mesh( new THREE.PlaneGeometry(640 * 2, 640 * 2), BACKGROUND_MATERIAL );
+    meshBg.position.set(x * 640 * 2, 640 -100, -200 );
+    this.scene.add(meshBg);
   }
+
+  // Add atmosphere
+  var geo1 = new THREE.PlaneGeometry(4000, 1000);
+  var material = new THREE.MeshBasicMaterial( {color: 0x1e1e1e} );
+  material.transparent = true;
+  material.blending = THREE.CustomBlending;
+  material.blendSrc = THREE.DstColorFactor;
+  material.blendDst = THREE.DstAlphaFactor;
+  material.blendEquation = THREE.AddEquation;
+
+  var mesh = new THREE.Mesh( geo1, material );
+  mesh.position.set( 0, 0, -10);
+  this.scene.add( mesh );
 
   this.generateWorld();
 
