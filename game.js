@@ -149,15 +149,6 @@ Game.prototype.click = function(event) {
   }
 };
 
-Game.prototype.cornerBlocks = function() {
-  var topLeft = this.ndcToLocal(-1, 1);
-  var bottomRight = this.ndcToLocal(1, -1);
-  return [
-    this.localToBlock(topLeft.x, topLeft.y),
-    this.localToBlock(bottomRight.x, bottomRight.y)
-  ];
-};
-
 Game.prototype.getGroundBeneathEntity = function (entity) {
   var lc = this.localToBlock(entity.sprite.position.x,
                              entity.sprite.position.y);
@@ -201,8 +192,6 @@ Game.prototype.start = function() {
     this.scene.add(background_sprite);
   }
 
-  this.generateWorld();
-
   window.addEventListener('keydown', this.handleKey.bind(this));
   window.addEventListener('keyup', this.handleKey.bind(this));
   window.addEventListener('blur', this.clearInput.bind(this));
@@ -233,20 +222,36 @@ Game.prototype.render = function() {
   this.renderer.render(this.scene, this.camera);
 };
 
-Game.prototype.generateWorld = function() {
+Game.prototype.generateVisibleWorld = function() {
+  var topLeftLc = this.ndcToLocal(-1, 1);
+  var bottomRightLc = this.ndcToLocal(1, -1);
+  var topLeftBc = this.localToBlock(topLeftLc.x, topLeftLc.y);
+  var bottomRightBc = this.localToBlock(bottomRightLc.x, bottomRightLc.y);
+  this.generateWorld(topLeftBc, bottomRightBc);
+};
+
+Game.prototype.generateWorld = function(topLeft, bottomRight) {
   this.plants = [];
-  for (var x = -30; x < 30; x++) {
-    for (var y = -1; y > -6; y--) {
+  var numNew = 0;
+  for (var x = topLeft[0]; x <= bottomRight[0]; x++) {
+    for (var y = Math.min(topLeft[1], -1); y >= bottomRight[1]; y--) {
+      if ([x,y] in this.terrainGrid) {
+        continue;
+      }
+      numNew++;
       var ground = new Ground(x, y);
       this.terrainGrid[[x, y]] = ground;
       this.addEntity(ground);
+      if (y == -1 && Math.random() < 0.5) {
+        var plant = new Plant(x, 0);
+        this.addEntity(plant);
+        this.plants.push(plant);
+      }
     }
-
-    if (Math.random() < 0.5) {
-      var plant = new Plant(x, 0);
-      this.addEntity(plant);
-      this.plants.push(plant);
-    }
+  }
+  if (this.debug && numNew > 0) {
+    console.log('generated', numNew, 'blocks',
+                'from', topLeft, 'to', bottomRight);
   }
 };
 
@@ -261,18 +266,28 @@ Game.prototype.onGround = function(entity) {
 var tickCount = 0;
 // Single tick of game time (1 frame)
 Game.prototype.tick = function() {
-  tickCount ++;
-  if (tickCount % 60 == 0) {
-    // console.log(this.onGround())
-  }
   this.handleInput();
+  if (tickCount == 0) {
+    this.generateVisibleWorld();
+  }
   for (var id in this.entities) {
     this.entities[id].tick();
   }
   for (var bc in this.terrainGrid) {
     this.terrainGrid[bc].tick();
   }
+  tickCount++;
 };
+
+Game.prototype.panCamera = function(x, y) {
+  if (x != null) {
+    this.camera.position.x += x;
+  }
+  if (y != null) {
+    this.camera.position.y += y;
+  }
+  this.generateVisibleWorld();
+}
 
 Game.prototype.toggleDebug = function() {
   this.debug = !this.debug;
