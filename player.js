@@ -2,10 +2,10 @@ var DUDE_MATERIAL = LoadJaggyMaterial('images/dude.png');
 var FLASH_MATERIAL = LoadJaggyMaterial('images/flash.png')
 
 function Player (game) {
-  this.speedX = -6;
-  this.speedY = 3
+  this.speedX = 0;
+  this.speedY = 0;
   this.sprite = new THREE.Sprite(DUDE_MATERIAL);
-  this.sprite.position.set(0, 100, 0);
+  this.teleport(0, 20);
   this.sprite.scale.set(4*13, 4*21, 1.0); // imageWidth, imageHeight
   this.direction = -1;
   this.game = game;
@@ -65,6 +65,11 @@ Player.prototype.tick = function() {
     var outline = game.outlineBlock(block[0], block[1]);
     setTimeout(function() {game.scene.remove(outline)}, 500);
   }
+};
+
+Player.prototype.teleport = function(x, y) {
+  var disp = game.gridToDisplay(x, y);
+  this.sprite.position.set(disp[0], disp[1], 0);
 };
 
 Player.prototype.jump = function() {

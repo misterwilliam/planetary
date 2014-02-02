@@ -110,12 +110,21 @@ Game.prototype.removeEntity = function(entity) {
   delete this.entities[entity.id];
 };
 
+// Returns center display coordinates from block coordinates.
 Game.prototype.gridToDisplay = function(x, y) {
-  return [x * BLOCK_SIZE, y * BLOCK_SIZE];
+  return [
+    (x * BLOCK_SIZE) + (BLOCK_SIZE / 2),
+    (y * BLOCK_SIZE) + (BLOCK_SIZE / 2)
+  ];
 };
 
+// Returns nearest block coordinates from display coordinates. Right and top
+// blocks win on edges.
 Game.prototype.displayToGrid = function(x, y) {
-  return [Math.floor(x / BLOCK_SIZE), Math.floor(y / BLOCK_SIZE)];
+  return [
+    Math.floor(x / BLOCK_SIZE),
+    Math.floor(y / BLOCK_SIZE)
+  ];
 };
 
 Game.prototype.getGroundBeneathEntity = function (entity) {
