@@ -127,6 +127,22 @@ Game.prototype.displayToGrid = function(x, y) {
   ];
 };
 
+Game.prototype.click = function(event) {
+  if (this.debug) {
+    var ndc = new THREE.Vector3(
+      (event.clientX / window.innerWidth) * 2 - 1,
+      -(event.clientY / window.innerHeight) * 2 + 1,
+      null);
+    var raycaster = new THREE.Projector().pickingRay(ndc, this.camera);
+    var groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+    var intersection = raycaster.ray.intersectPlane(groundPlane);
+    var block = this.displayToGrid(intersection.x, intersection.y);
+    console.log('clicked block', block);
+    var outline = game.outlineBlock(block[0], block[1], 0x00ff00);
+    setTimeout(function() {game.scene.remove(outline)}, 1000);
+  }
+};
+
 Game.prototype.getGroundBeneathEntity = function (entity) {
   var coords = this.displayToGrid(entity.sprite.position.x,
                                   entity.sprite.position.y);
@@ -177,6 +193,7 @@ Game.prototype.start = function() {
   window.addEventListener('keyup', this.handleKey.bind(this));
   window.addEventListener('blur', this.clearInput.bind(this));
   window.addEventListener('resize', this.resize.bind(this));
+  window.addEventListener('mousedown', this.click.bind(this));
 
   requestAnimationFrame(this.animate.bind(this));
 }
@@ -270,8 +287,8 @@ Game.prototype.toggleDebug = function() {
 Game.prototype.drawLine = function(from, to, color) {
   var material = new THREE.LineBasicMaterial({color: color || null});
   var geometry = new THREE.Geometry();
-  geometry.vertices.push(new THREE.Vector3(from[0], from[1], 10));
-  geometry.vertices.push(new THREE.Vector3(to[0], to[1], 10));
+  geometry.vertices.push(new THREE.Vector3(from[0], from[1], 1));
+  geometry.vertices.push(new THREE.Vector3(to[0], to[1], 1));
   var line = new THREE.Line(geometry, material);
   this.scene.add(line);
   return line;
@@ -280,11 +297,11 @@ Game.prototype.drawLine = function(from, to, color) {
 Game.prototype.drawRect = function(cornerA, cornerB, color) {
   var material = new THREE.LineBasicMaterial({color: color || null});
   var geometry = new THREE.Geometry();
-  geometry.vertices.push(new THREE.Vector3(cornerA[0], cornerA[1], 10));
-  geometry.vertices.push(new THREE.Vector3(cornerB[0], cornerA[1], 10));
-  geometry.vertices.push(new THREE.Vector3(cornerB[0], cornerB[1], 10));
-  geometry.vertices.push(new THREE.Vector3(cornerA[0], cornerB[1], 10));
-  geometry.vertices.push(new THREE.Vector3(cornerA[0], cornerA[1], 10));
+  geometry.vertices.push(new THREE.Vector3(cornerA[0], cornerA[1], 1));
+  geometry.vertices.push(new THREE.Vector3(cornerB[0], cornerA[1], 1));
+  geometry.vertices.push(new THREE.Vector3(cornerB[0], cornerB[1], 1));
+  geometry.vertices.push(new THREE.Vector3(cornerA[0], cornerB[1], 1));
+  geometry.vertices.push(new THREE.Vector3(cornerA[0], cornerA[1], 1));
   var box = new THREE.Line(geometry, material);
   this.scene.add(box);
   return box;
