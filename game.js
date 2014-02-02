@@ -39,6 +39,8 @@ function Game() {
   this.entities = [];
   this.terrainGrid = {};
   this.debug = false;
+  this.groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+  this.projector = new THREE.Projector();
 };
 
 Game.prototype.resize = function() {
@@ -110,58 +112,70 @@ Game.prototype.removeEntity = function(entity) {
   delete this.entities[entity.id];
 };
 
-// Returns center display coordinates from block coordinates.
-Game.prototype.gridToDisplay = function(x, y) {
+// Returns local GL coordinates of the center of a block from block coordinates.
+Game.prototype.blockToLocal = function(x, y) {
   return [
     (x * BLOCK_SIZE),
     (y * BLOCK_SIZE)
   ];
 };
 
-// Returns nearest block coordinates from display coordinates. Right and top
+// Returns nearest block coordinates from local GL coordinates. Right and top
 // blocks win on edges.
-Game.prototype.displayToGrid = function(x, y) {
+Game.prototype.localToBlock = function(x, y) {
   return [
     Math.round(x / BLOCK_SIZE),
     Math.round(y / BLOCK_SIZE)
   ];
 };
 
+// Returns local GL coordinates on the ground plane from normalized device
+// coordinates.
+Game.prototype.ndcToLocal = function(x, y) {
+  var ndc = new THREE.Vector3(x, y, null);
+  var raycaster = this.projector.pickingRay(ndc, this.camera);
+  return raycaster.ray.intersectPlane(this.groundPlane);
+};
+
 Game.prototype.click = function(event) {
   if (this.debug) {
-    var ndc = new THREE.Vector3(
+    var lc = this.ndcToLocal(
       (event.clientX / window.innerWidth) * 2 - 1,
-      -(event.clientY / window.innerHeight) * 2 + 1,
-      null);
-    var raycaster = new THREE.Projector().pickingRay(ndc, this.camera);
-    var groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-    var intersection = raycaster.ray.intersectPlane(groundPlane);
-    var block = this.displayToGrid(intersection.x, intersection.y);
-    console.log('clicked block', block);
-    var outline = game.outlineBlock(block[0], block[1], 0x00ff00);
+      -(event.clientY / window.innerHeight) * 2 + 1);
+    var bc = this.localToBlock(lc.x, lc.y);
+    console.log('clicked block', bc);
+    var outline = game.outlineBlock(bc[0], bc[1], 0x00ff00);
     setTimeout(function() {game.scene.remove(outline)}, 1000);
   }
 };
 
-Game.prototype.getGroundBeneathEntity = function (entity) {
-  var coords = this.displayToGrid(entity.sprite.position.x,
-                                  entity.sprite.position.y);
+Game.prototype.cornerBlocks = function() {
+  var topLeft = this.ndcToLocal(-1, 1);
+  var bottomRight = this.ndcToLocal(1, -1);
+  return [
+    this.localToBlock(topLeft.x, topLeft.y),
+    this.localToBlock(bottomRight.x, bottomRight.y)
+  ];
+};
 
-  var height = coords[1]-1;
-  while (!([coords[0], height] in this.terrainGrid)) {
+Game.prototype.getGroundBeneathEntity = function (entity) {
+  var lc = this.localToBlock(entity.sprite.position.x,
+                             entity.sprite.position.y);
+  var height = lc[1] - 1;
+  while (!([lc[0], height] in this.terrainGrid)) {
     if (height <= MAX_DEPTH) {
       return null;
     }
     height -= 1;
   }
-  return this.terrainGrid[[coords[0], height]];
+  return this.terrainGrid[[lc[0], height]];
 };
 
 Game.prototype.neighbors = function(entity) {
-  var coords = this.displayToGrid(entity.sprite.position.x,
-                                  entity.sprite.position.y);
-  var x = coords[0];
-  var y = coords[1];
+  var block = this.localToBlock(entity.sprite.position.x,
+                                entity.sprite.position.y);
+  var x = block[0];
+  var y = block[1];
   return [
     [x + 1, y + 1],
     [x + 1, y - 1],
@@ -195,7 +209,7 @@ Game.prototype.start = function() {
   window.addEventListener('resize', this.resize.bind(this));
   window.addEventListener('mousedown', this.click.bind(this));
 
-  requestAnimationFrame(this.animate.bind(this));
+  this.animate();
 }
 
 // Called when when we are allowed to render. In general at 60 fps.
@@ -255,8 +269,8 @@ Game.prototype.tick = function() {
   for (var id in this.entities) {
     this.entities[id].tick();
   }
-  for (var coords in this.terrainGrid) {
-    this.terrainGrid[coords].tick();
+  for (var bc in this.terrainGrid) {
+    this.terrainGrid[bc].tick();
   }
 };
 
@@ -308,9 +322,9 @@ Game.prototype.drawRect = function(cornerA, cornerB, color) {
 };
 
 Game.prototype.outlineBlock = function(x, y, color) {
-  var disp = this.gridToDisplay(x, y);
+  var lc = this.blockToLocal(x, y);
   return this.drawRect(
-    [disp[0] - BLOCK_SIZE / 2, disp[1] - BLOCK_SIZE / 2],
-    [disp[0] + BLOCK_SIZE / 2, disp[1] + BLOCK_SIZE / 2],
+    [lc[0] - BLOCK_SIZE / 2, lc[1] - BLOCK_SIZE / 2],
+    [lc[0] + BLOCK_SIZE / 2, lc[1] + BLOCK_SIZE / 2],
     color);
 };

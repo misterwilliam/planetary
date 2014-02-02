@@ -60,16 +60,16 @@ Player.prototype.tick = function() {
 
   // Highlight the trail of blocks we enter.
   if (game.debug) {
-    var block = game.displayToGrid(this.sprite.position.x,
-                                   this.sprite.position.y);
-    var outline = game.outlineBlock(block[0], block[1]);
+    var bc = game.localToBlock(this.sprite.position.x,
+                                  this.sprite.position.y);
+    var outline = game.outlineBlock(bc[0], bc[1]);
     setTimeout(function() {game.scene.remove(outline)}, 500);
   }
 };
 
 Player.prototype.teleport = function(x, y) {
-  var disp = game.gridToDisplay(x, y);
-  this.sprite.position.set(disp[0], disp[1], 0);
+  var lc = game.blockToLocal(x, y);
+  this.sprite.position.set(lc[0], lc[1], 0);
 };
 
 Player.prototype.jump = function() {

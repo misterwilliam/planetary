@@ -7,8 +7,8 @@ function Plant(x, y) {
   this.x = x;
   this.y = y;
   this.sprite = new THREE.Sprite(GREEN_MATERIAL);
-  var disp = game.gridToDisplay(x, y);
-  this.sprite.position.set(disp[0], disp[1], 0);
+  var lc = game.blockToLocal(x, y);
+  this.sprite.position.set(lc[0], lc[1], 0);
   this.sprite.scale.set(64, 64, 1.0);
   this.ticksSinceLastDrop = 0;
   this.ticksSinceLastDecay = 0;
