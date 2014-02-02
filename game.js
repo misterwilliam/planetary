@@ -113,8 +113,8 @@ Game.prototype.removeEntity = function(entity) {
 // Returns center display coordinates from block coordinates.
 Game.prototype.gridToDisplay = function(x, y) {
   return [
-    (x * BLOCK_SIZE) + (BLOCK_SIZE / 2),
-    (y * BLOCK_SIZE) + (BLOCK_SIZE / 2)
+    (x * BLOCK_SIZE),
+    (y * BLOCK_SIZE)
   ];
 };
 
@@ -122,8 +122,8 @@ Game.prototype.gridToDisplay = function(x, y) {
 // blocks win on edges.
 Game.prototype.displayToGrid = function(x, y) {
   return [
-    Math.floor(x / BLOCK_SIZE),
-    Math.floor(y / BLOCK_SIZE)
+    Math.round(x / BLOCK_SIZE),
+    Math.round(y / BLOCK_SIZE)
   ];
 };
 
@@ -291,8 +291,9 @@ Game.prototype.drawRect = function(cornerA, cornerB, color) {
 };
 
 Game.prototype.outlineBlock = function(x, y, color) {
+  var disp = this.gridToDisplay(x, y);
   return this.drawRect(
-    [x * BLOCK_SIZE, y * BLOCK_SIZE],
-    [x * BLOCK_SIZE + BLOCK_SIZE, y * BLOCK_SIZE + BLOCK_SIZE],
+    [disp[0] - BLOCK_SIZE / 2, disp[1] - BLOCK_SIZE / 2],
+    [disp[0] + BLOCK_SIZE / 2, disp[1] + BLOCK_SIZE / 2],
     color);
 };
