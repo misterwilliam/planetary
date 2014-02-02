@@ -57,6 +57,14 @@ Player.prototype.tick = function() {
       this.speedX = 0;
     }
   }
+
+  // Highlight the trail of blocks we enter.
+  if (game.debug) {
+    var block = game.displayToGrid(this.sprite.position.x,
+                                   this.sprite.position.y);
+    var outline = game.outlineBlock(block[0], block[1]);
+    setTimeout(function() {game.scene.remove(outline)}, 500);
+  }
 };
 
 Player.prototype.jump = function() {

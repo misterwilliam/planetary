@@ -38,7 +38,7 @@ function Game() {
   this.lastEntityId = -1;
   this.entities = [];
   this.terrainGrid = {};
-  this.drawDebug();
+  this.debug = false;
 };
 
 Game.prototype.resize = function() {
@@ -87,7 +87,7 @@ Game.prototype.handleKey = function(event) {
   } else {
     this.input[key] = false;
     if (key == 'debug') {
-      this.drawDebug();
+      this.toggleDebug();
     }
   }
 };
@@ -234,13 +234,28 @@ Game.prototype.tick = function() {
   }
 };
 
-Game.prototype.drawDebug = function() {
-  // Origin block.
-  this.outlineBlock(0, 0, 0x0000ff);
+Game.prototype.toggleDebug = function() {
+  this.debug = !this.debug;
 
-  // Origin lines.
-  this.drawLine([0, 300], [0, -300], 0xff0000);
-  this.drawLine([300, 0], [-300, 0], 0xff0000);
+  if (this.debug) {
+    this.debugSprites = [];
+
+    // Origin block.
+    this.debugSprites.push(
+      this.outlineBlock(0, 0, 0x0000ff));
+
+    // Origin lines.
+    this.debugSprites.push(
+      this.drawLine([0, 300], [0, -300], 0xff0000));
+    this.debugSprites.push(
+      this.drawLine([300, 0], [-300, 0], 0xff0000));
+
+  } else {
+    var self = this;
+    this.debugSprites.forEach(function(sprite) {
+      self.scene.remove(sprite);
+    });
+  }
 };
 
 Game.prototype.drawLine = function(from, to, color) {

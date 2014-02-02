@@ -19,6 +19,9 @@
       window.addEventListener('load', function() {
         game = new Game();
         game.start();
+        if (document.URL.indexOf('debug') != -1) {
+          game.toggleDebug();
+        }
       });
     </script>
 
