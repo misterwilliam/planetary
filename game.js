@@ -226,10 +226,11 @@ Game.prototype.generateWorld = function(topLeft, bottomRight) {
         this.plants.push(plant);
 
         // Add air around plants
-        this.atmosphereController.addAir(x - 1, 0);
         this.atmosphereController.addAir(x, 0);
-        this.atmosphereController.addAir(x, 1);
-        this.atmosphereController.addAir(x + 1, 0);
+        var points = Grid.neighbors(x, 0, 2);
+        for (var i = 0; i < points.length; i++) {
+          this.atmosphereController.addAir(points[i][0], points[i][1]);
+        }
       }
     }
   }
