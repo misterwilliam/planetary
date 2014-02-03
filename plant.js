@@ -27,7 +27,7 @@ Plant.prototype.tick = function() {
 };
 
 Plant.prototype.dropWater = function() {
-  var neighborCoords = game.neighbors(this);
+  var neighborCoords = Grid.entityNeighbors(this);
   neighborCoords.forEach(function(coord) {
     var x = coord[0];
     var y = coord[1];

@@ -163,23 +163,6 @@ Game.prototype.getGroundBeneathEntity = function (entity) {
   return this.terrainGrid[[lc[0], height]];
 };
 
-Game.prototype.neighbors = function(entity) {
-  var block = this.localToBlock(entity.sprite.position.x,
-                                entity.sprite.position.y);
-  var x = block[0];
-  var y = block[1];
-  return [
-    [x + 1, y + 1],
-    [x + 1, y - 1],
-    [x + 1, y],
-    [x - 1, y + 1],
-    [x - 1, y - 1],
-    [x - 1, y],
-    [x,     y + 1],
-    [x,     y - 1],
-  ];
-};
-
 Game.prototype.start = function() {
   this.player = new Player(this);
   this.addEntity(this.player);
