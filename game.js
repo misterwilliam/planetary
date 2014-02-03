@@ -41,6 +41,7 @@ function Game() {
   this.debug = false;
   this.groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
   this.projector = new THREE.Projector();
+  this.atmosphereController = new AtmosphereController(this.scene);
 };
 
 Game.prototype.resize = function() {
@@ -186,19 +187,6 @@ Game.prototype.start = function() {
   var bgController = new BackgroundController(this.scene);
   bgController.drawBackground();
 
-  // Add atmosphere
-  var geo1 = new THREE.PlaneGeometry(4000, 1000);
-  var material = new THREE.MeshBasicMaterial( {color: 0x1e1e1e} );
-  material.transparent = true;
-  material.blending = THREE.CustomBlending;
-  material.blendSrc = THREE.DstColorFactor;
-  material.blendDst = THREE.DstAlphaFactor;
-  material.blendEquation = THREE.AddEquation;
-
-  var mesh = new THREE.Mesh( geo1, material );
-  mesh.position.set( 0, 0, -10);
-  this.scene.add( mesh );
-
   window.addEventListener('keydown', this.handleKey.bind(this));
   window.addEventListener('keyup', this.handleKey.bind(this));
   window.addEventListener('blur', this.clearInput.bind(this));
@@ -253,6 +241,12 @@ Game.prototype.generateWorld = function(topLeft, bottomRight) {
         var plant = new Plant(x, 0);
         this.addEntity(plant);
         this.plants.push(plant);
+
+        // Add air around plants
+        this.atmosphereController.addAir(x - 1, 0);
+        this.atmosphereController.addAir(x, 0);
+        this.atmosphereController.addAir(x, 1);
+        this.atmosphereController.addAir(x + 1, 0);
       }
     }
   }
