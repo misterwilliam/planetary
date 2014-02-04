@@ -1,3 +1,11 @@
+/// <reference path='lib/three.d.ts'/>
+/// <reference path='grid.ts'/>
+/// <reference path='ground.ts'/>
+/// <reference path='atmosphere.ts'/>
+/// <reference path='plant.ts'/>
+/// <reference path='player.ts'/>
+/// <reference path='background.ts'/>
+
 var PLAYER_MAX_SPEED = 8;
 var PLAYER_ACCELERATION = 0.001;
 var JUMP_HEIGHT = 10;
@@ -328,3 +336,13 @@ Game.prototype.outlineBlock = function(x, y, color) {
     [lc[0] + BLOCK_SIZE / 2, lc[1] + BLOCK_SIZE / 2],
     color);
 };
+
+
+var game;
+window.addEventListener('load', function() {
+  game = new Game();
+  game.start();
+  if (document.URL.indexOf('debug') != -1) {
+    game.toggleDebug();
+  }
+});

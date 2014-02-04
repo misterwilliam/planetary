@@ -19,17 +19,6 @@
     <script src="plant.js"></script>
     <script src="ground.js"></script>
 
-    <script>
-      var game;
-      window.addEventListener('load', function() {
-        game = new Game();
-        game.start();
-        if (document.URL.indexOf('debug') != -1) {
-          game.toggleDebug();
-        }
-      });
-    </script>
-
     <script src="lib/live.js"></script>
   </body>
 </html>
