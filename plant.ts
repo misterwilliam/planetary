@@ -31,7 +31,7 @@ Plant.prototype.dropWater = function() {
   neighborCoords.forEach(function(coord) {
     var x = coord[0];
     var y = coord[1];
-    ground = game.terrainGrid[[x,y]];
+    var ground = game.terrainGrid[[x,y]];
     if (ground) {
       ground.water(20);
     }

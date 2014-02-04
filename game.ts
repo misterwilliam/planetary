@@ -13,6 +13,15 @@ var MAX_DEPTH = -6;
 var MAX_CATCHUP = 10;
 var BLOCK_SIZE = 64;
 
+var INPUT_MAP = {
+  87:  'jump',  // w
+  83:  'down',  // s
+  68:  'right', // d
+  65:  'left',  // a
+  32:  'dig',   // space
+  192: 'debug', // ~
+};
+
 var getNow = (function() {
   if (window.performance && window.performance.now) {
     return window.performance.now.bind(window.performance);
@@ -45,7 +54,7 @@ function Game() {
 
   this.lastEntityId = -1;
   this.entities = [];
-  this.terrainGrid = {};
+  this.terrainGrid = new Grid();
   this.debug = false;
   this.groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
   this.projector = new THREE.Projector();
@@ -80,17 +89,10 @@ Game.prototype.handleInput = function() {
   }
 };
 
-Game.INPUT_MAP = {
-  87:  'jump',  // w
-  83:  'down',  // s
-  68:  'right', // d
-  65:  'left',  // a
-  32:  'dig',   // space
-  192: 'debug', // ~
-};
+
 
 Game.prototype.handleKey = function(event) {
-  var key = Game.INPUT_MAP[event.which];
+  var key = INPUT_MAP[event.which];
   if (!key) {
     console.log('unbound key:', event.which);
   } else if (event.type == 'keydown') {
@@ -162,13 +164,13 @@ Game.prototype.getGroundBeneathEntity = function (entity) {
   var lc = this.localToBlock(entity.sprite.position.x,
                              entity.sprite.position.y);
   var height = lc[1] - 1;
-  while (!([lc[0], height] in this.terrainGrid)) {
+  while (!this.terrainGrid.has(lc[0], height)) {
     if (height <= MAX_DEPTH) {
       return null;
     }
     height -= 1;
   }
-  return this.terrainGrid[[lc[0], height]];
+  return this.terrainGrid.get(lc[0], height);
 };
 
 Game.prototype.start = function() {
@@ -221,12 +223,12 @@ Game.prototype.generateWorld = function(topLeft, bottomRight) {
   var numNew = 0;
   for (var x = topLeft[0]; x <= bottomRight[0]; x++) {
     for (var y = Math.min(topLeft[1], -1); y >= bottomRight[1]; y--) {
-      if ([x,y] in this.terrainGrid) {
+      if (this.terrainGrid.has(x, y)) {
         continue;
       }
       numNew++;
       var ground = new Ground(x, y);
-      this.terrainGrid[[x, y]] = ground;
+      this.terrainGrid.set(x, y, ground);
       this.addEntity(ground);
       if (y == -1 && Math.random() < 0.5) {
         var plant = new Plant(x, 0);
@@ -266,8 +268,8 @@ Game.prototype.tick = function() {
   for (var id in this.entities) {
     this.entities[id].tick();
   }
-  for (var bc in this.terrainGrid) {
-    this.terrainGrid[bc].tick();
+  for (var bc in this.terrainGrid._grid) {
+    this.terrainGrid._grid[bc].tick();
   }
   tickCount++;
 };

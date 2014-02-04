@@ -1,1 +1,1 @@
-tsc game.ts --out main.js
+tsc game.ts --out main.js --sourcemap
