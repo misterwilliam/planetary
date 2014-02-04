@@ -7,19 +7,18 @@ ATMOS_MAT.blendEquation = THREE.AddEquation;
 
 var ATMOS_SHAPE = new THREE.PlaneGeometry(BLOCK_SIZE, BLOCK_SIZE);
 
-function AtmosphereController(scene) {
-  this.scene = scene;
-  this.grid = new Grid();
-};
+class AtmosphereController {
+	grid = new Grid();
+	constructor(public scene) {}
 
-AtmosphereController.prototype.addAir = function(x, y) {
-  if (this.grid.has(x, y)) {
-    return;
-  } else {
+	addAir(x, y) {
+	  if (this.grid.has(x, y)) {
+	    return;
+	  }
     this.grid.set(x, y, "air");
     var mesh = new THREE.Mesh(ATMOS_SHAPE, ATMOS_MAT);
     var lc = game.blockToLocal(x, y);
     mesh.position.set(lc[0], lc[1], -10);
     this.scene.add(mesh);
-  }
+	}
 }
