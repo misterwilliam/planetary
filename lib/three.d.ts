@@ -4166,6 +4166,7 @@ declare module THREE {
         constructor(material?: SpriteMaterial);
         updateMatrix(): void;
         clone(object?: Sprite): Sprite;
+        material : SpriteMaterial;
     }
     export class SpriteAlignment {
         static topLeft: Vector2;
