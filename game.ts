@@ -33,12 +33,17 @@ var tickCount = 0;
 
 // Creates a new SpriteMaterial with nearest-neighbor texture filtering from
 // image URL.
-function LoadJaggyMaterial(url) {
+function LoadJaggyMaterial(url:string) {
   var texture = THREE.ImageUtils.loadTexture(url);
   texture.magFilter = texture.minFilter = THREE.NearestFilter;
   return new THREE.SpriteMaterial({map: texture});
 };
 
+interface Entity {
+  tick():void;
+  sprite : THREE.Sprite;
+  id : number
+}
 
 class Game {
   scene = new THREE.Scene();
@@ -51,8 +56,8 @@ class Game {
     jump: false, down: false, right: false, left: false, dig:false
   };
   lastEntityId = -1;
-  entities = [];
-  terrainGrid = new Grid();
+  entities : Entity[] = [];
+  terrainGrid = new Grid<Ground>();
   debug = false;
   groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
   projector = new THREE.Projector();
@@ -109,20 +114,20 @@ class Game {
     }
   }
 
-  clearInput = function() {
+  clearInput() {
     console.log('clearing input');
     for (var key in this.input) {
       this.input[key] = false;
     }
   }
 
-  addEntity = function(entity) {
+  addEntity(entity:Entity) {
     entity.id = ++this.lastEntityId;
     this.entities[entity.id] = entity;
     this.scene.add(entity.sprite);
   }
 
-  removeEntity(entity) {
+  removeEntity(entity:Entity) {
     this.scene.remove(entity.sprite);
     delete this.entities[entity.id];
   }
@@ -165,7 +170,7 @@ class Game {
     }
   }
 
-  getGroundBeneathEntity = function (entity) {
+  getGroundBeneathEntity(entity:Entity):Ground {
     var lc = this.localToBlock(entity.sprite.position.x,
                                entity.sprite.position.y);
     var height = lc[1] - 1;
@@ -223,7 +228,7 @@ class Game {
     this.generateWorld(topLeftBc, bottomRightBc);
   }
 
-  generateWorld(topLeft, bottomRight) {
+  generateWorld(topLeft:number[], bottomRight:number[]) {
     this.plants = [];
     var numNew = 0;
     for (var x = topLeft[0]; x <= bottomRight[0]; x++) {
@@ -255,7 +260,7 @@ class Game {
     }
   }
 
-  onGround(entity) {
+  onGround(entity:Entity) : boolean {
     var ground = this.getGroundBeneathEntity(entity);
     if (!ground) {
       return false;
@@ -312,7 +317,7 @@ class Game {
     }
   }
 
-  drawLine(from, to, color) {
+  drawLine(from:number[], to:number[], color?:number) : THREE.Line {
     var material = new THREE.LineBasicMaterial({color: color || null});
     var geometry = new THREE.Geometry();
     geometry.vertices.push(new THREE.Vector3(from[0], from[1], 1));
@@ -322,7 +327,7 @@ class Game {
     return line;
   }
 
-  drawRect(cornerA, cornerB, color) {
+  drawRect(cornerA:number[], cornerB:number[], color?:number) : THREE.Line {
     var material = new THREE.LineBasicMaterial({color: color || null});
     var geometry = new THREE.Geometry();
     geometry.vertices.push(new THREE.Vector3(cornerA[0], cornerA[1], 1));
@@ -335,7 +340,7 @@ class Game {
     return box;
   }
 
-  outlineBlock(x, y, color) {
+  outlineBlock(x:number, y:number, color?:number) : THREE.Line {
     var lc = this.blockToLocal(x, y);
     return this.drawRect(
       [lc[0] - BLOCK_SIZE / 2, lc[1] - BLOCK_SIZE / 2],
@@ -344,7 +349,7 @@ class Game {
   }
 }
 
-var game;
+var game : Game;
 window.addEventListener('load', function() {
   game = new Game();
   game.start();

@@ -2,7 +2,7 @@ var BACKGROUND_TEXTURE = THREE.ImageUtils.loadTexture("images/mountains.png");
 var BACKGROUND_MATERIAL = new THREE.MeshBasicMaterial({map: BACKGROUND_TEXTURE});
 
 class BackgroundController {
-	constructor(public scene) {}
+	constructor(public scene:THREE.Scene) {}
 	drawBackground() {
 	  for (var x = -30; x < 30; x++) {
 	    var meshBg = new THREE.Mesh(new THREE.PlaneGeometry(640 * 2, 640 * 2),

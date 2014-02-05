@@ -7,9 +7,10 @@ var WET_MATERIAL = new THREE.SpriteMaterial({
   map: THREE.ImageUtils.loadTexture('images/soil.png')
 });
 
-class Ground {
+class Ground implements Entity{
   sprite = new THREE.Sprite(DRY_MATERIAL);
   waterLevel = 0;
+  id : number = -1;
   constructor(public x:number, public y:number) {
     var lc = game.blockToLocal(x, y);
     this.sprite.position.set(lc[0], lc[1], 0);
@@ -48,17 +49,18 @@ class Ground {
 
   hit() {
     var self = this;
-    game.entities.forEach(function(plant) {
-      if (plant.constructor != Plant) {
+    game.entities.forEach(function(entity: Entity) {
+      if (entity instanceof Plant) {
         return;
       }
+      var plant = <Plant>(entity);
       if (plant.x == self.x && plant.y == self.y + 1) {
         game.removeEntity(plant);
       }
     });
 
     game.scene.remove(this.sprite);
-    delete game.terrainGrid[[this.x, this.y]];
+    game.terrainGrid.clear(this.x, this.y);
   }
 
 }

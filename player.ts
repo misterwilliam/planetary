@@ -1,13 +1,14 @@
 var DUDE_MATERIAL = LoadJaggyMaterial('images/dude.png');
 var FLASH_MATERIAL = LoadJaggyMaterial('images/flash.png')
 
-class Player {
+class Player implements Entity {
   speedX = 0;
   speedY = 0;
   sprite = new THREE.Sprite(DUDE_MATERIAL);
   direction = -1;
   lastDig = -10000;
   flashSprite = new THREE.Sprite(FLASH_MATERIAL);
+  id : number = -1;
 
   constructor(public game:Game) {
     this.teleport(0, 20);
@@ -62,7 +63,7 @@ class Player {
     if (game.debug) {
       var bc = game.localToBlock(this.sprite.position.x,
                                     this.sprite.position.y);
-      var outline = game.outlineBlock(bc[0], bc[1]);
+      var outline : THREE.Line = game.outlineBlock(bc[0], bc[1]);
       setTimeout(function() {game.scene.remove(outline)}, 500);
     }
   }

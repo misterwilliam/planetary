@@ -1,37 +1,37 @@
-class Grid {
-  _grid = {};
-  set(x, y, value) {
+class Grid<T> {
+  _grid : {[coords:string]: T} = {};
+  set(x:number, y:number, value:T) {
     this._grid['' + [x, y]] = value;
   }
-  get(x, y) {
+  get(x: number, y:number):T {
     return this._grid['' + [x, y]];
   }
-  has = function(x, y) {
+  has(x:number, y:number):boolean {
     return ([x,y] + '') in this._grid;
   }
-  clear = function(x, y) {
+  clear(x:number, y:number) {
     delete this._grid['' + [x, y]];
   }
 
   // Returns list of neighboring grid coordinates. If range is passed then
   // returns list of neighbors withing Manhattan distance range.
-  static neighbors(x, y, range) {
+  static neighbors(x:number, y:number, range:number):number[][] {
     if (range === undefined) {
       range = 1;
     }
-    var neighbors = [];
+    var neighbors : number[][] = [];
     for (var i = -range; i <= range; i++) {
       for (var j = -range; j <= range; j++) {
         if ((i == 0 && j == 0) || (Math.abs(i) + Math.abs(j) > range)) {
           continue;
         }
-        neighbors.push('' + [x + i, y + j]);
+        neighbors.push([x + i, y + j]);
       }
     }
     return neighbors;
   }
 
-  static entityNeighbors(entity, range) {
+  static entityNeighbors(entity:Entity, range:number) {
     var block = game.localToBlock(entity.sprite.position.x,
                                   entity.sprite.position.y);
     return Grid.neighbors(block[0], block[1], range);

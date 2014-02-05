@@ -4942,7 +4942,7 @@ declare module THREE {
         center(geometry: Geometry): Vector3;
         normalizeUVs(geometry: Geometry): void;
         triangulateQuads(geometry: Geometry): void;
-        setMaterialIndex(geometry: Geometry, index: number, startFace?: number, endFace?: number);
+        setMaterialIndex(geometry: Geometry, index: number, startFace?: number, endFace?: number): void;
     };
 
     export var ImageUtils: {

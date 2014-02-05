@@ -3,11 +3,12 @@ var GREEN_MATERIAL = LoadJaggyMaterial('images/plant.png');
 var BROWN_MATERIAL = LoadJaggyMaterial('images/plant-brown.png');
 var BLACK_MATERIAL = LoadJaggyMaterial('images/plant-black.png');
 
-class Plant {
+class Plant implements Entity {
   sprite = new THREE.Sprite(GREEN_MATERIAL);
   ticksSinceLastDrop = 0;
   ticksSinceLastDecay = 0;
   life = 100;
+  id = -1;
   constructor(public x:number, public y:number) {
     var lc = game.blockToLocal(x, y);
     this.sprite.position.set(lc[0], lc[1], 0);
@@ -30,14 +31,14 @@ class Plant {
     neighborCoords.forEach(function(coord) {
       var x = coord[0];
       var y = coord[1];
-      var ground = game.terrainGrid[[x,y]];
+      var ground = game.terrainGrid.get(x, y);
       if (ground) {
         ground.water(20);
       }
     });
   }
 
-  decay(amt) {
+  decay(amt:number) {
     this.life -= amt;
     if (this.life <= 0) {
       this.sprite.material = BLACK_MATERIAL;

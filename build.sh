@@ -1,1 +1,1 @@
-tsc game.ts --out main.js --sourcemap
+tsc game.ts --out main.js --sourcemap --noImplicitAny
