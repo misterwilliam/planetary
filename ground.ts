@@ -7,6 +7,67 @@ var WET_MATERIAL = new THREE.SpriteMaterial({
   map: THREE.ImageUtils.loadTexture('images/soil.png')
 });
 
+class TerrainStore {
+  seed = Math.random();
+  modifiedChunks = new Grid<Grid<Ground>>();
+
+  onAdd(x:number, y:number, ground:Ground) {
+    var chunk = this.getModifiedChunk(x,y);
+    var intrachunkx = x % 64;
+    var intrachunky = y % 64;
+    chunk.set(intrachunkx, intrachunky, ground);
+  }
+
+  onRemove(x:number, y:number) {
+    var chunk = this.getModifiedChunk(x,y);
+    var intrachunkx = x % 64;
+    var intrachunky = y % 64;
+    chunk.clear(intrachunkx, intrachunky);
+  }
+
+  getChunk(x:number, y:number) {
+    var chunkx = Math.floor(x / 64);
+    var chunky = Math.floor(y / 64);
+    var chunk = this.modifiedChunks.get(chunkx, chunky);
+    if (!chunk) {
+      chunk = this.generateChunk(chunkx, chunky);
+    }
+    return chunk;
+  }
+
+  private getModifiedChunk(x:number, y:number) {
+    var chunkx = Math.floor(x / 64);
+    var chunky = Math.floor(y / 64);
+    var chunk = this.modifiedChunks.get(chunkx, chunky);
+    if (!chunk) {
+      chunk = this.generateChunk(chunkx, chunky);
+      this.modifiedChunks.set(chunkx, chunky, chunk)
+    }
+    return chunk;
+  }
+
+  private generateChunk(x:number, y:number) {
+    // once we're doing terrain generation, we should do something with the
+    // seed and x and y to consistently generate the same terrain here
+    var chunk = new Grid<Ground>();
+    if (y > 0) {
+      return chunk;  // pure empty air
+    }
+    var baseX = x * 64;
+    var baseY = y * 64;
+    for (var intrachunkx = 0; intrachunkx < 64; intrachunkx++) {
+      for (var intrachunky = 0; intrachunky < 64; intrachunky++) {
+        var absoluteX = baseX + intrachunkx;
+        var absoluteY = baseY + intrachunky;
+        if (absoluteY <= 0) { // below ground, there's ground
+          chunk.set(intrachunkx, intrachunky, new Ground(absoluteX, absoluteY));
+        }
+      }
+    }
+  }
+
+}
+
 class Ground implements Entity{
   sprite = new THREE.Sprite(DRY_MATERIAL);
   waterLevel = 0;
