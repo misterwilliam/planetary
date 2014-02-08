@@ -271,7 +271,7 @@ class Game {
   // Single tick of game time (1 frame)
   tick() {
     this.handleInput();
-    if (tickCount == 0) {
+    if (tickCount == 1) {
       this.generateVisibleWorld();
     }
     for (var id in this.entities) {
