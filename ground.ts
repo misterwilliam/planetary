@@ -8,7 +8,6 @@ var WET_MATERIAL = new THREE.SpriteMaterial({
 });
 
 interface WorldGenerator {
-  public
   generateChunk(chunkX:number, chunkY:number):Grid<Ground>;
 }
 
@@ -38,7 +37,7 @@ class FlatEarth implements WorldGenerator {
 
 class TerrainStore {
   modifiedChunks = new Grid<Grid<Ground>>();
-  constructor(public worldGenerator:WorldGenerator) {};
+  constructor(public worldGenerator:WorldGenerator) {}
 
   onAdd(x:number, y:number, ground:Ground) {
     var chunk = this.getModifiedChunk(x,y);

@@ -65,6 +65,8 @@ class Game {
   player : Player;
   plants : Plant[];
   debugSprites : THREE.Object3D[];
+  terrainStore = new TerrainStore(new FlatEarth());
+  activeChunks = new Grid<Grid<Ground>>();
 
   constructor() {
     this.camera.position.set(0, 0, 800);
@@ -229,8 +231,8 @@ class Game {
   }
 
   generateWorld(topLeft:number[], bottomRight:number[]) {
-    this.plants = [];
     var numNew = 0;
+
     for (var x = topLeft[0]; x <= bottomRight[0]; x++) {
       for (var y = Math.min(topLeft[1], -1); y >= bottomRight[1]; y--) {
         if (this.terrainGrid.has(x, y)) {
@@ -240,24 +242,27 @@ class Game {
         var ground = new Ground(x, y);
         this.terrainGrid.set(x, y, ground);
         this.addEntity(ground);
-        if (y == -1 && Math.random() < 0.5) {
-          var plant = new Plant(x, 0);
-          this.addEntity(plant);
-          this.plants.push(plant);
-
-          // Add air around plants
-          this.atmosphereController.addAir(x, 0);
-          var points = Grid.neighbors(x, 0, 2);
-          for (var i = 0; i < points.length; i++) {
-            this.atmosphereController.addAir(points[i][0], points[i][1]);
-          }
-        }
       }
     }
     if (this.debug && numNew > 0) {
       console.log('generated', numNew, 'blocks',
                   'from', topLeft, 'to', bottomRight);
     }
+  }
+
+  addPlants() {
+    // if (y == -1 && Math.random() < 0.5) {
+    //   var plant = new Plant(x, 0);
+    //   this.addEntity(plant);
+    //   this.plants.push(plant);
+
+    //   // Add air around plants
+    //   this.atmosphereController.addAir(x, 0);
+    //   var points = Grid.neighbors(x, 0, 2);
+    //   for (var i = 0; i < points.length; i++) {
+    //     this.atmosphereController.addAir(points[i][0], points[i][1]);
+    //   }
+    // }
   }
 
   onGround(entity:Entity) : boolean {
