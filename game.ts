@@ -3,8 +3,10 @@
 /// <reference path='consts.ts'/>
 /// <reference path='grid.ts'/>
 /// <reference path='ground.ts'/>
+/// <reference path='air-generator.ts'/>
 /// <reference path='atmosphere.ts'/>
 /// <reference path='plant.ts'/>
+/// <reference path='tree.ts'/>
 /// <reference path='player.ts'/>
 /// <reference path='background.ts'/>
 
@@ -40,6 +42,12 @@ interface Entity {
   id : number
 }
 
+interface BlockAlignedEntity extends Entity {
+  // x and y are in blockspace
+  x: number;
+  y: number;
+}
+
 class Game {
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(90, null, 0.1, 1000);
@@ -62,6 +70,7 @@ class Game {
   debugSprites : THREE.Object3D[];
   terrainStore = new TerrainStore(new FlatEarth());
   activeChunks = new Grid<Chunk>();
+  hasRendered = false;
 
   constructor() {
     this.camera.position.set(0, 0, 800);
@@ -124,7 +133,9 @@ class Game {
   addEntity(entity:Entity) {
     entity.id = ++this.lastEntityId;
     this.entities[entity.id] = entity;
-    this.scene.add(entity.sprite);
+    if (entity.sprite) {
+      this.scene.add(entity.sprite);
+    }
   }
 
   removeEntity(entity:Entity) {
@@ -161,6 +172,9 @@ class Game {
   // Returns local GL coordinates on the ground plane from normalized device
   // coordinates.
   ndcToLocal(x:number, y:number) {
+    if (!this.hasRendered) {
+      throw new Error('Must have rendered before calling ndcToLocal');
+    }
     var ndc = new THREE.Vector3(x, y, null);
     var raycaster = this.projector.pickingRay(ndc, this.camera);
     return raycaster.ray.intersectPlane(this.groundPlane);
@@ -204,6 +218,9 @@ class Game {
     var bgController = new BackgroundController(this.scene);
     bgController.drawBackground();
 
+    var airGenerator = new AirGenerator(5, 7);
+    this.addEntity(airGenerator);
+
     window.addEventListener('keydown', this.handleKey.bind(this));
     window.addEventListener('keyup', this.handleKey.bind(this));
     window.addEventListener('blur', this.clearInput.bind(this));
@@ -231,6 +248,7 @@ class Game {
 
   // Renders a single frame
   render() {
+    this.hasRendered = true;
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -276,7 +294,6 @@ class Game {
       this.addEntity(ground);
     });
     chunk.plants.forEach((plant) => {
-      this.plants.push(plant);
       this.addEntity(plant);
 
       // Add air around plants
@@ -296,26 +313,11 @@ class Game {
     });
     chunk.plants.forEach((plant) => {
       this.removeEntity(plant);
-      // TODO: remove plants from this.plants
       // TODO: remove atmosphere from around plants,
       //       or just in the chunk in general?
     });
   }
 
-  addPlants() {
-        // if (y == -1 && Math.random() < 0.1) {
-        //   var plant = new Plant(x, 0);
-        //   this.addEntity(plant);
-        //   this.plants.push(plant);
-
-        //   // Add air around plants
-        //   this.atmosphereController.addAir(x, 0);
-        //   var points = Grid.neighbors(x, 0, 2);
-        //   for (var i = 0; i < points.length; i++) {
-        //     this.atmosphereController.addAir(points[i][0], points[i][1]);
-        //   }
-        // }
-  }
 
   onGround(entity:Entity) : boolean {
     var ground = this.getGroundBeneathEntity(entity);
@@ -328,7 +330,7 @@ class Game {
   // Single tick of game time (1 frame)
   tick() {
     this.handleInput();
-    if (tickCount == 1) {
+    if (this.hasRendered) {
       this.generateVisibleWorld();
     }
     for (var id in this.entities) {

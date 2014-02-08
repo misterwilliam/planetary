@@ -12,7 +12,7 @@ interface WorldGenerator {
 }
 
 class Chunk extends Grid<Ground> {
-  plants : Plant[] = [];
+  plants : BlockAlignedEntity[] = [];
   constructor(public chunkX:number, public chunkY:number) {
     super();
   }
@@ -44,11 +44,16 @@ class FlatEarth implements WorldGenerator {
           chunk.set(intrachunkx, intrachunky, new Ground(absoluteX, absoluteY));
         }
 
-        if (absoluteY == 0 && rng() < 0.1) {
-          var plant = new Plant(absoluteX, 1);
-          chunk.plants.push(plant);
+        if (absoluteY == 0) {
+          if(rng() < 0.1) {
+            var plant = new Plant(absoluteX, 1);
+            chunk.plants.push(plant);
+          }
+          if (rng() < 0.03) {
+            var tree = new Tree(absoluteX, 1);
+            chunk.plants.push(tree);
+          }
         }
-
       }
     }
     return chunk;
