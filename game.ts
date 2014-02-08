@@ -61,6 +61,7 @@ class Game {
   player : Player;
   plants : Plant[];
   debugSprites : THREE.Object3D[];
+  hasRendered = false;
 
   constructor() {
     this.camera.position.set(0, 0, 800);
@@ -154,6 +155,9 @@ class Game {
   // Returns local GL coordinates on the ground plane from normalized device
   // coordinates.
   ndcToLocal(x:number, y:number) {
+    if (!this.hasRendered) {
+      throw new Error('Must have rendered before calling ndcToLocal');
+    }
     var ndc = new THREE.Vector3(x, y, null);
     var raycaster = this.projector.pickingRay(ndc, this.camera);
     return raycaster.ray.intersectPlane(this.groundPlane);
@@ -221,6 +225,7 @@ class Game {
 
   // Renders a single frame
   render() {
+    this.hasRendered = true;
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -281,7 +286,7 @@ class Game {
   // Single tick of game time (1 frame)
   tick() {
     this.handleInput();
-    if (tickCount == 1) {
+    if (this.hasRendered) {
       this.generateVisibleWorld();
     }
     for (var id in this.entities) {
