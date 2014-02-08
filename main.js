@@ -255,6 +255,48 @@ var Plant = (function () {
     };
     return Plant;
 })();
+var MAX_HEIGHT = 7;
+var GROW_SPEED = 60;
+
+var BARK_MATERIAL = LoadJaggyMaterial('images/bark.png');
+var LEAVES_MATERIAL = LoadJaggyMaterial('images/leaves.png');
+
+var Tree = (function () {
+    function Tree(x, y) {
+        this.x = x;
+        this.y = y;
+        this.sprite = new THREE.Sprite(BARK_MATERIAL);
+        this.id = -1;
+        this.height = 0;
+        this.hasLeaves = false;
+        this.ticksSinceLastGrow = 0;
+        this.grow = function () {
+            if (this.height < MAX_HEIGHT) {
+                var bark = new THREE.Sprite(BARK_MATERIAL);
+                var lc = game.blockToLocal(this.x, this.y + this.height);
+                bark.position.set(lc[0], lc[1], -2);
+                bark.scale.set(16 * 4, 16 * 4, 1.0);
+                game.scene.add(bark);
+                this.height++;
+            } else if (!this.hasLeaves) {
+                var leaves = new THREE.Sprite(LEAVES_MATERIAL);
+                var lc = game.blockToLocal(this.x, this.y + this.height);
+                leaves.position.set(lc[0], lc[1], -1);
+                leaves.scale.set(64 * 4, 32 * 4, 1.0);
+                game.scene.add(leaves);
+                this.hasLeaves = true;
+            }
+        };
+        this.grow();
+    }
+    Tree.prototype.tick = function () {
+        if (++this.ticksSinceLastGrow == GROW_SPEED) {
+            this.grow();
+            this.ticksSinceLastGrow = 0;
+        }
+    };
+    return Tree;
+})();
 var DUDE_MATERIAL = LoadJaggyMaterial('images/dude.png');
 var FLASH_MATERIAL = LoadJaggyMaterial('images/flash.png');
 var PAN_DISTANCE = 300;
@@ -378,6 +420,7 @@ var BackgroundController = (function () {
 /// <reference path='ground.ts'/>
 /// <reference path='atmosphere.ts'/>
 /// <reference path='plant.ts'/>
+/// <reference path='tree.ts'/>
 /// <reference path='player.ts'/>
 /// <reference path='background.ts'/>
 var INPUT_MAP = {
@@ -484,7 +527,9 @@ var Game = (function () {
     Game.prototype.addEntity = function (entity) {
         entity.id = ++this.lastEntityId;
         this.entities[entity.id] = entity;
-        this.scene.add(entity.sprite);
+        if (entity.sprite) {
+            this.scene.add(entity.sprite);
+        }
     };
 
     Game.prototype.removeEntity = function (entity) {
@@ -599,16 +644,22 @@ var Game = (function () {
                 var ground = new Ground(x, y);
                 this.terrainGrid.set(x, y, ground);
                 this.addEntity(ground);
-                if (y == -1 && Math.random() < 0.1) {
-                    var plant = new Plant(x, 0);
-                    this.addEntity(plant);
-                    this.plants.push(plant);
+                if (y == -1) {
+                    if (Math.random() < 0.1) {
+                        var plant = new Plant(x, 0);
+                        this.addEntity(plant);
+                        this.plants.push(plant);
 
-                    // Add air around plants
-                    this.atmosphereController.addAir(x, 0);
-                    var points = Grid.neighbors(x, 0, 2);
-                    for (var i = 0; i < points.length; i++) {
-                        this.atmosphereController.addAir(points[i][0], points[i][1]);
+                        // Add air around plants
+                        this.atmosphereController.addAir(x, 0);
+                        var points = Grid.neighbors(x, 0, 2);
+                        for (var i = 0; i < points.length; i++) {
+                            this.atmosphereController.addAir(points[i][0], points[i][1]);
+                        }
+                    }
+                    if (Math.random() < 0.03) {
+                        var tree = new Tree(x, 0);
+                        this.addEntity(tree);
                     }
                 }
             }
