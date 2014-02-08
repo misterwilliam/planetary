@@ -11,7 +11,8 @@ var PLAYER_ACCELERATION = 0.001;
 var JUMP_HEIGHT = 10;
 var MAX_DEPTH = -6;
 var MAX_CATCHUP = 10;
-var BLOCK_SIZE = 64;
+var BLOCK_SIZE = 32;
+var MAGIC_NUMBER = 56;
 
 var INPUT_MAP = {
   87:  'jump',  // w
@@ -240,7 +241,7 @@ class Game {
         var ground = new Ground(x, y);
         this.terrainGrid.set(x, y, ground);
         this.addEntity(ground);
-        if (y == -1 && Math.random() < 0.5) {
+        if (y == -1 && Math.random() < 0.1) {
           var plant = new Plant(x, 0);
           this.addEntity(plant);
           this.plants.push(plant);
@@ -265,7 +266,7 @@ class Game {
     if (!ground) {
       return false;
     }
-    return entity.sprite.position.y - (ground.sprite.position.y + 74) < 1;
+    return entity.sprite.position.y - (ground.sprite.position.y + MAGIC_NUMBER) < 1;
   }
 
   // Single tick of game time (1 frame)
