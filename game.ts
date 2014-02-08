@@ -277,9 +277,9 @@ class Game {
     for (var id in this.entities) {
       this.entities[id].tick();
     }
-    for (var bc in this.terrainGrid._grid) {
-      this.terrainGrid._grid[bc].tick();
-    }
+    this.terrainGrid.forEach((x, y, ground) => {
+      ground.tick();
+    })
     tickCount++;
   }
 

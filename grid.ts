@@ -1,5 +1,5 @@
 class Grid<T> {
-  _grid : {[coords:string]: T} = {};
+  private _grid : {[coords:string]: T} = {};
   set(x:number, y:number, value:T) {
     this._grid['' + [x, y]] = value;
   }
