@@ -14,6 +14,12 @@ var Grid = (function () {
     Grid.prototype.clear = function (x, y) {
         delete this._grid['' + [x, y]];
     };
+    Grid.prototype.forEach = function (f) {
+        for (var key in this._grid) {
+            var s = key.split(',');
+            f(parseInt(s[0], 10), parseInt(s[1], 10), this._grid[key]);
+        }
+    };
 
     // Returns list of neighboring grid coordinates. If range is passed then
     // returns list of neighbors withing Manhattan distance range.
@@ -626,9 +632,9 @@ var Game = (function () {
         for (var id in this.entities) {
             this.entities[id].tick();
         }
-        for (var bc in this.terrainGrid._grid) {
-            this.terrainGrid._grid[bc].tick();
-        }
+        this.terrainGrid.forEach(function (x, y, ground) {
+            ground.tick();
+        });
         tickCount++;
     };
 
