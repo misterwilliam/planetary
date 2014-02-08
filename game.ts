@@ -277,6 +277,9 @@ class Game {
     this.terrainGrid.forEach((x, y, ground) => {
       ground.tick();
     })
+    if (tickCount % 600 == 0) {
+      console.log(this.scene.children.length, ' objects in scene');
+    }
     tickCount++;
   }
 
