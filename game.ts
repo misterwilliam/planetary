@@ -1,4 +1,5 @@
 /// <reference path='lib/three.d.ts'/>
+/// <reference path='consts.ts'/>
 /// <reference path='grid.ts'/>
 /// <reference path='ground.ts'/>
 /// <reference path='atmosphere.ts'/>
@@ -6,14 +7,6 @@
 /// <reference path='tree.ts'/>
 /// <reference path='player.ts'/>
 /// <reference path='background.ts'/>
-
-var PLAYER_MAX_SPEED = 8;
-var PLAYER_ACCELERATION = 0.001;
-var JUMP_HEIGHT = 10;
-var MAX_DEPTH = -6;
-var MAX_CATCHUP = 10;
-var BLOCK_SIZE = 32;
-var MAGIC_NUMBER = 56;
 
 var INPUT_MAP = {
   87:  'jump',  // w
