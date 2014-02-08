@@ -1,8 +1,8 @@
 /// <reference path='lib/three.d.ts'/>
-/// <reference path='air-generator.ts'/>
 /// <reference path='consts.ts'/>
 /// <reference path='grid.ts'/>
 /// <reference path='ground.ts'/>
+/// <reference path='air-generator.ts'/>
 /// <reference path='atmosphere.ts'/>
 /// <reference path='plant.ts'/>
 /// <reference path='tree.ts'/>
@@ -191,6 +191,9 @@ class Game {
     var bgController = new BackgroundController(this.scene);
     bgController.drawBackground();
 
+    var airGenerator = new AirGenerator(5, 7);
+    this.addEntity(airGenerator);
+
     window.addEventListener('keydown', this.handleKey.bind(this));
     window.addEventListener('keyup', this.handleKey.bind(this));
     window.addEventListener('blur', this.clearInput.bind(this));
@@ -230,8 +233,6 @@ class Game {
   }
 
   generateWorld(topLeft:number[], bottomRight:number[]) {
-    var airGenerator = new AirGenerator(5, 7);
-    this.addEntity(airGenerator);
     this.plants = [];
     var numNew = 0;
     for (var x = topLeft[0]; x <= bottomRight[0]; x++) {
