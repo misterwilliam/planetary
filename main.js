@@ -1,19 +1,3 @@
-var AIR_GENERATOR_MATERIAL = LoadJaggyMaterial('images/air-maker.png');
-
-var AirGenerator = (function () {
-    function AirGenerator(x, y) {
-        this.x = x;
-        this.y = y;
-        this.sprite = new THREE.Sprite(AIR_GENERATOR_MATERIAL);
-        this.id = -1;
-        var lc = game.blockToLocal(x, y);
-        this.sprite.position.set(lc[0], lc[1] + 15, -1);
-        this.sprite.scale.set(4 * 128, 4 * 128, 1.0);
-    }
-    AirGenerator.prototype.tick = function () {
-    };
-    return AirGenerator;
-})();
 var PLAYER_MAX_SPEED = 8;
 var PLAYER_ACCELERATION = 0.001;
 var JUMP_HEIGHT = 10;
@@ -195,6 +179,27 @@ var Ground = (function () {
         game.terrainGrid.clear(this.x, this.y);
     };
     return Ground;
+})();
+var AIR_GENERATOR_MATERIAL = LoadJaggyMaterial('images/air-maker.png');
+
+var AirGenerator = (function () {
+    function AirGenerator(x, y) {
+        this.x = x;
+        this.y = y;
+        this.sprite = new THREE.Sprite(AIR_GENERATOR_MATERIAL);
+        this.id = -1;
+        var lc = game.blockToLocal(x, y);
+        this.sprite.position.set(lc[0], lc[1] + 15, -1);
+        this.sprite.scale.set(4 * 128, 4 * 128, 1.0);
+
+        var points = Grid.neighbors(x, y, 30);
+        for (var i = 0; i < points.length; i++) {
+            game.atmosphereController.addAir(points[i][0], points[i][1]);
+        }
+    }
+    AirGenerator.prototype.tick = function () {
+    };
+    return AirGenerator;
 })();
 var ATMOS_MAT = new THREE.MeshBasicMaterial({ color: 0x1e1e1e });
 ATMOS_MAT.transparent = true;
@@ -431,10 +436,10 @@ var BackgroundController = (function () {
     return BackgroundController;
 })();
 /// <reference path='lib/three.d.ts'/>
-/// <reference path='air-generator.ts'/>
 /// <reference path='consts.ts'/>
 /// <reference path='grid.ts'/>
 /// <reference path='ground.ts'/>
+/// <reference path='air-generator.ts'/>
 /// <reference path='atmosphere.ts'/>
 /// <reference path='plant.ts'/>
 /// <reference path='tree.ts'/>
@@ -611,6 +616,9 @@ var Game = (function () {
         var bgController = new BackgroundController(this.scene);
         bgController.drawBackground();
 
+        var airGenerator = new AirGenerator(5, 7);
+        this.addEntity(airGenerator);
+
         window.addEventListener('keydown', this.handleKey.bind(this));
         window.addEventListener('keyup', this.handleKey.bind(this));
         window.addEventListener('blur', this.clearInput.bind(this));
@@ -650,8 +658,6 @@ var Game = (function () {
     };
 
     Game.prototype.generateWorld = function (topLeft, bottomRight) {
-        var airGenerator = new AirGenerator(5, 7);
-        this.addEntity(airGenerator);
         this.plants = [];
         var numNew = 0;
         for (var x = topLeft[0]; x <= bottomRight[0]; x++) {
