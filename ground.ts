@@ -11,6 +11,18 @@ interface WorldGenerator {
   generateChunk(chunkX:number, chunkY:number):Chunk;
 }
 
+class Chunk extends Grid<Ground> {
+  constructor(public chunkX:number, public chunkY:number) {
+    super();
+  }
+
+  static blockToChunk(blockCoords: number[]):number[] {
+    var chunkx = Math.floor(blockCoords[0] / CHUNK_SIZE);
+    var chunky = Math.floor(blockCoords[1] / CHUNK_SIZE);
+    return [chunkx, chunky];
+  }
+}
+
 class FlatEarth implements WorldGenerator {
 
   generateChunk(chunkX:number, chunkY:number) {
@@ -20,10 +32,10 @@ class FlatEarth implements WorldGenerator {
     if (chunkY > 0) {
       return chunk;  // pure empty air
     }
-    var baseX = chunkX * 64;
-    var baseY = chunkY * 64;
-    for (var intrachunkx = 0; intrachunkx < 64; intrachunkx++) {
-      for (var intrachunky = 0; intrachunky < 64; intrachunky++) {
+    var baseX = chunkX * CHUNK_SIZE;
+    var baseY = chunkY * CHUNK_SIZE;
+    for (var intrachunkx = 0; intrachunkx < CHUNK_SIZE; intrachunkx++) {
+      for (var intrachunky = 0; intrachunky < CHUNK_SIZE; intrachunky++) {
         var absoluteX = baseX + intrachunkx;
         var absoluteY = baseY + intrachunky;
         if (absoluteY <= 0) { // below ground, there's ground
@@ -41,15 +53,15 @@ class TerrainStore {
 
   onAdd(x:number, y:number, ground:Ground) {
     var chunk = this.getModifiedChunk(x,y);
-    var intrachunkx = x % 64;
-    var intrachunky = y % 64;
+    var intrachunkx = x % CHUNK_SIZE;
+    var intrachunky = y % CHUNK_SIZE;
     chunk.set(intrachunkx, intrachunky, ground);
   }
 
   onRemove(x:number, y:number) {
     var chunk = this.getModifiedChunk(x,y);
-    var intrachunkx = x % 64;
-    var intrachunky = y % 64;
+    var intrachunkx = x % CHUNK_SIZE;
+    var intrachunky = y % CHUNK_SIZE;
     chunk.clear(intrachunkx, intrachunky);
   }
 
@@ -66,8 +78,8 @@ class TerrainStore {
   }
 
   private getModifiedChunk(x:number, y:number) {
-    var chunkx = Math.floor(x / 64);
-    var chunky = Math.floor(y / 64);
+    var chunkx = Math.floor(x / CHUNK_SIZE);
+    var chunky = Math.floor(y / CHUNK_SIZE);
     var chunk = this.modifiedChunks.get(chunkx, chunky);
     if (!chunk) {
       chunk = this.worldGenerator.generateChunk(chunkx, chunky);

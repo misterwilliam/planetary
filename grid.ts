@@ -48,15 +48,3 @@ class Grid<T> {
     return Grid.neighbors(block[0], block[1], range);
   }
 }
-
-class Chunk extends Grid<Ground> {
-  constructor(public chunkX:number, public chunkY:number) {
-    super();
-  }
-
-  static blockToChunk(blockCoords: number[]):number[] {
-    var chunkx = Math.floor(blockCoords[0] / 64);
-    var chunky = Math.floor(blockCoords[1] / 64);
-    return [chunkx, chunky];
-  }
-}
