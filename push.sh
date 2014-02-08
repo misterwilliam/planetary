@@ -1,6 +1,7 @@
 set -e
 
 git checkout gh-pages
+git pull origin
 git merge master -m 'automatic merge'
 ./build.sh
 git add main.js main.js.map
