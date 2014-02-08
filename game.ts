@@ -4,6 +4,7 @@
 /// <reference path='ground.ts'/>
 /// <reference path='atmosphere.ts'/>
 /// <reference path='plant.ts'/>
+/// <reference path='tree.ts'/>
 /// <reference path='player.ts'/>
 /// <reference path='background.ts'/>
 
@@ -121,7 +122,9 @@ class Game {
   addEntity(entity:Entity) {
     entity.id = ++this.lastEntityId;
     this.entities[entity.id] = entity;
-    this.scene.add(entity.sprite);
+    if (entity.sprite) {
+      this.scene.add(entity.sprite);
+    }
   }
 
   removeEntity(entity:Entity) {
@@ -237,16 +240,22 @@ class Game {
         var ground = new Ground(x, y);
         this.terrainGrid.set(x, y, ground);
         this.addEntity(ground);
-        if (y == -1 && Math.random() < 0.1) {
-          var plant = new Plant(x, 0);
-          this.addEntity(plant);
-          this.plants.push(plant);
+        if (y == -1) {
+          if (Math.random() < 0.1) {
+            var plant = new Plant(x, 0);
+            this.addEntity(plant);
+            this.plants.push(plant);
 
-          // Add air around plants
-          this.atmosphereController.addAir(x, 0);
-          var points = Grid.neighbors(x, 0, 2);
-          for (var i = 0; i < points.length; i++) {
-            this.atmosphereController.addAir(points[i][0], points[i][1]);
+            // Add air around plants
+            this.atmosphereController.addAir(x, 0);
+            var points = Grid.neighbors(x, 0, 2);
+            for (var i = 0; i < points.length; i++) {
+              this.atmosphereController.addAir(points[i][0], points[i][1]);
+            }
+          }
+          if (Math.random() < 0.03) {
+            var tree = new Tree(x, 0);
+            this.addEntity(tree);
           }
         }
       }
