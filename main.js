@@ -250,6 +250,7 @@ var Plant = (function () {
 })();
 var DUDE_MATERIAL = LoadJaggyMaterial('images/dude.png');
 var FLASH_MATERIAL = LoadJaggyMaterial('images/flash.png');
+var PAN_DISTANCE = 300;
 
 var Player = (function () {
     function Player(game) {
@@ -266,21 +267,20 @@ var Player = (function () {
         this.flashSprite.scale.set(4 * 13, 4 * 21, 1.0); // imageWidth, imageHeight
     }
     Player.prototype.tick = function () {
-        // Move camera with player
-        if (this.sprite.position.x - this.game.camera.position.x > 300) {
-            // Pan right with player
-            this.game.panCamera(Math.abs(this.speedX));
-        } else if (this.sprite.position.x - this.game.camera.position.x < -300) {
-            // Pan left with player
-            this.game.panCamera(-Math.abs(this.speedX));
+        // Move camera with player.
+        var cameraOffset = this.sprite.position.x - this.game.camera.position.x;
+        if (cameraOffset > PAN_DISTANCE) {
+            this.game.panCamera(Math.abs(this.speedX) || 0.5);
+        } else if (cameraOffset < -PAN_DISTANCE) {
+            this.game.panCamera(-Math.abs(this.speedX) || -0.5);
         }
 
-        // Gravity on player
+        // Gravity on player.
         if (!this.game.onGround(this)) {
             this.speedY -= 0.7;
         }
 
-        // apply speed to position
+        // Apply speed to position.
         this.sprite.position.x += this.speedX;
 
         var groundBeneath = this.game.getGroundBeneathEntity(this);
@@ -435,6 +435,9 @@ var Game = (function () {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        if (tickCount != 0) {
+            this.generateVisibleWorld();
+        }
     };
 
     Game.prototype.handleInput = function () {
