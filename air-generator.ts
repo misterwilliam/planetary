@@ -5,7 +5,7 @@ class AirGenerator implements Entity {
   id = -1;
   constructor(public x:number, public y:number) {
     var lc = game.blockToLocal(x, y);
-    this.sprite.position.set(lc[0], lc[1] + 10, 0);
+    this.sprite.position.set(lc[0], lc[1] + 15, -1);
     this.sprite.scale.set(4 * 128, 4 * 128, 1.0);
   }
 
