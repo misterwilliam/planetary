@@ -7,9 +7,38 @@ var WET_MATERIAL = new THREE.SpriteMaterial({
   map: THREE.ImageUtils.loadTexture('images/soil.png')
 });
 
+interface WorldGenerator {
+  public
+  generateChunk(chunkX:number, chunkY:number):Grid<Ground>;
+}
+
+class FlatEarth implements WorldGenerator {
+
+  generateChunk(chunkX:number, y:number) {
+    // once we're doing terrain generation, we should do something with the
+    // seed and chunkX and y to consistently generate the same terrain here
+    var chunk = new Grid<Ground>();
+    if (y > 0) {
+      return chunk;  // pure empty air
+    }
+    var baseX = chunkX * 64;
+    var baseY = y * 64;
+    for (var intrachunkx = 0; intrachunkx < 64; intrachunkx++) {
+      for (var intrachunky = 0; intrachunky < 64; intrachunky++) {
+        var absoluteX = baseX + intrachunkx;
+        var absoluteY = baseY + intrachunky;
+        if (absoluteY <= 0) { // below ground, there's ground
+          chunk.set(intrachunkx, intrachunky, new Ground(absoluteX, absoluteY));
+        }
+      }
+    }
+    return chunk;
+  }
+}
+
 class TerrainStore {
-  seed = Math.random();
   modifiedChunks = new Grid<Grid<Ground>>();
+  constructor(public worldGenerator:WorldGenerator) {};
 
   onAdd(x:number, y:number, ground:Ground) {
     var chunk = this.getModifiedChunk(x,y);
@@ -30,7 +59,7 @@ class TerrainStore {
     var chunky = Math.floor(y / 64);
     var chunk = this.modifiedChunks.get(chunkx, chunky);
     if (!chunk) {
-      chunk = this.generateChunk(chunkx, chunky);
+      chunk = this.worldGenerator.generateChunk(chunkx, chunky);
     }
     return chunk;
   }
@@ -40,30 +69,10 @@ class TerrainStore {
     var chunky = Math.floor(y / 64);
     var chunk = this.modifiedChunks.get(chunkx, chunky);
     if (!chunk) {
-      chunk = this.generateChunk(chunkx, chunky);
+      chunk = this.worldGenerator.generateChunk(chunkx, chunky);
       this.modifiedChunks.set(chunkx, chunky, chunk)
     }
     return chunk;
-  }
-
-  private generateChunk(x:number, y:number) {
-    // once we're doing terrain generation, we should do something with the
-    // seed and x and y to consistently generate the same terrain here
-    var chunk = new Grid<Ground>();
-    if (y > 0) {
-      return chunk;  // pure empty air
-    }
-    var baseX = x * 64;
-    var baseY = y * 64;
-    for (var intrachunkx = 0; intrachunkx < 64; intrachunkx++) {
-      for (var intrachunky = 0; intrachunky < 64; intrachunky++) {
-        var absoluteX = baseX + intrachunkx;
-        var absoluteY = baseY + intrachunky;
-        if (absoluteY <= 0) { // below ground, there's ground
-          chunk.set(intrachunkx, intrachunky, new Ground(absoluteX, absoluteY));
-        }
-      }
-    }
   }
 
 }
