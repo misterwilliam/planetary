@@ -1,19 +1,11 @@
 /// <reference path='lib/three.d.ts'/>
+/// <reference path='consts.ts'/>
 /// <reference path='grid.ts'/>
 /// <reference path='ground.ts'/>
 /// <reference path='atmosphere.ts'/>
 /// <reference path='plant.ts'/>
 /// <reference path='player.ts'/>
 /// <reference path='background.ts'/>
-
-var PLAYER_MAX_SPEED = 8;
-var PLAYER_ACCELERATION = 0.001;
-var JUMP_HEIGHT = 10;
-var MAX_DEPTH = -6;
-var MAX_CATCHUP = 10;
-var BLOCK_SIZE = 32;
-var CHUNK_SIZE = 64;
-var MAGIC_NUMBER = 56;
 
 var INPUT_MAP = {
   87:  'jump',  // w
@@ -80,7 +72,7 @@ class Game {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    if (tickCount > 0){
+    if (tickCount != 0) {
       this.generateVisibleWorld();
     }
   }
@@ -328,10 +320,10 @@ class Game {
     for (var id in this.entities) {
       this.entities[id].tick();
     }
-    tickCount++;
-    if (tickCount % 60 == 0) {
+    if (tickCount % 600 == 0) {
       console.log(this.scene.children.length, " objects in scene");
     }
+    tickCount++;
   }
 
   panCamera(x?:number, y?:number) {
