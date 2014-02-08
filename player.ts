@@ -1,5 +1,6 @@
 var DUDE_MATERIAL = LoadJaggyMaterial('images/dude.png');
 var FLASH_MATERIAL = LoadJaggyMaterial('images/flash.png')
+var PAN_DISTANCE = 300;
 
 class Player implements Entity {
   speedX = 0;
@@ -17,21 +18,20 @@ class Player implements Entity {
   }
 
   tick() {
-    // Move camera with player
-    if (this.sprite.position.x - this.game.camera.position.x > 300) {
-      // Pan right with player
-      this.game.panCamera(Math.abs(this.speedX));
-    } else if (this.sprite.position.x - this.game.camera.position.x < -300) {
-      // Pan left with player
-      this.game.panCamera(-Math.abs(this.speedX));
+    // Move camera with player.
+    var cameraOffset = this.sprite.position.x - this.game.camera.position.x;
+    if (cameraOffset > PAN_DISTANCE) {
+      this.game.panCamera(Math.abs(this.speedX) || 0.5);
+    } else if (cameraOffset < -PAN_DISTANCE) {
+      this.game.panCamera(-Math.abs(this.speedX) || -0.5);
     }
 
-    // Gravity on player
+    // Gravity on player.
     if (!this.game.onGround(this)) {
       this.speedY -= 0.7;
     }
 
-    // apply speed to position
+    // Apply speed to position.
     this.sprite.position.x += this.speedX;
 
     var groundBeneath = this.game.getGroundBeneathEntity(this);
@@ -40,7 +40,7 @@ class Player implements Entity {
     if (groundBeneath != newGroundBeneath) {
       // collide with old ground beneath
       // we went through groundBeneith, so reset our height to be its.
-      this.sprite.position.y = Math.max(groundBeneath.sprite.position.y, newGroundBeneath.sprite.position.y) + 74;
+      this.sprite.position.y = Math.max(groundBeneath.sprite.position.y, newGroundBeneath.sprite.position.y) + MAGIC_NUMBER;
       this.speedY = 0;
     }
 

@@ -1,5 +1,5 @@
 class Grid<T> {
-  _grid : {[coords:string]: T} = {};
+  private _grid : {[coords:string]: T} = {};
   set(x:number, y:number, value:T) {
     this._grid['' + [x, y]] = value;
   }
@@ -11,6 +11,12 @@ class Grid<T> {
   }
   clear(x:number, y:number) {
     delete this._grid['' + [x, y]];
+  }
+  forEach(f:(x:number, y:number, value:T)=>void) {
+    for (var key in this._grid) {
+      var s = key.split(',');
+      f(parseInt(s[0], 10), parseInt(s[1], 10), this._grid[key]);
+    }
   }
 
   // Returns list of neighboring grid coordinates. If range is passed then

@@ -1,3 +1,10 @@
+var PLAYER_MAX_SPEED = 8;
+var PLAYER_ACCELERATION = 0.001;
+var JUMP_HEIGHT = 10;
+var MAX_DEPTH = -6;
+var MAX_CATCHUP = 10;
+var BLOCK_SIZE = 32;
+var MAGIC_NUMBER = 56;
 var Grid = (function () {
     function Grid() {
         this._grid = {};
@@ -13,6 +20,12 @@ var Grid = (function () {
     };
     Grid.prototype.clear = function (x, y) {
         delete this._grid['' + [x, y]];
+    };
+    Grid.prototype.forEach = function (f) {
+        for (var key in this._grid) {
+            var s = key.split(',');
+            f(parseInt(s[0], 10), parseInt(s[1], 10), this._grid[key]);
+        }
     };
 
     // Returns list of neighboring grid coordinates. If range is passed then
@@ -219,7 +232,7 @@ var Plant = (function () {
         };
         var lc = game.blockToLocal(x, y);
         this.sprite.position.set(lc[0], lc[1], 0);
-        this.sprite.scale.set(64, 64, 1.0);
+        this.sprite.scale.set(13 * 4, 21 * 4, 1.0);
     }
     Plant.prototype.tick = function () {
         if (++this.ticksSinceLastDrop == 60) {
@@ -242,8 +255,51 @@ var Plant = (function () {
     };
     return Plant;
 })();
+var MAX_HEIGHT = 7;
+var GROW_SPEED = 60;
+
+var BARK_MATERIAL = LoadJaggyMaterial('images/bark.png');
+var LEAVES_MATERIAL = LoadJaggyMaterial('images/leaves.png');
+
+var Tree = (function () {
+    function Tree(x, y) {
+        this.x = x;
+        this.y = y;
+        this.sprite = new THREE.Sprite(BARK_MATERIAL);
+        this.id = -1;
+        this.height = 0;
+        this.hasLeaves = false;
+        this.ticksSinceLastGrow = 0;
+        this.grow = function () {
+            if (this.height < MAX_HEIGHT) {
+                var bark = new THREE.Sprite(BARK_MATERIAL);
+                var lc = game.blockToLocal(this.x, this.y + this.height);
+                bark.position.set(lc[0], lc[1], -2);
+                bark.scale.set(16 * 4, 16 * 4, 1.0);
+                game.scene.add(bark);
+                this.height++;
+            } else if (!this.hasLeaves) {
+                var leaves = new THREE.Sprite(LEAVES_MATERIAL);
+                var lc = game.blockToLocal(this.x, this.y + this.height);
+                leaves.position.set(lc[0], lc[1], -1);
+                leaves.scale.set(64 * 4, 32 * 4, 1.0);
+                game.scene.add(leaves);
+                this.hasLeaves = true;
+            }
+        };
+        this.grow();
+    }
+    Tree.prototype.tick = function () {
+        if (++this.ticksSinceLastGrow == GROW_SPEED) {
+            this.grow();
+            this.ticksSinceLastGrow = 0;
+        }
+    };
+    return Tree;
+})();
 var DUDE_MATERIAL = LoadJaggyMaterial('images/dude.png');
 var FLASH_MATERIAL = LoadJaggyMaterial('images/flash.png');
+var PAN_DISTANCE = 300;
 
 var Player = (function () {
     function Player(game) {
@@ -260,21 +316,20 @@ var Player = (function () {
         this.flashSprite.scale.set(4 * 13, 4 * 21, 1.0); // imageWidth, imageHeight
     }
     Player.prototype.tick = function () {
-        // Move camera with player
-        if (this.sprite.position.x - this.game.camera.position.x > 300) {
-            // Pan right with player
-            this.game.panCamera(Math.abs(this.speedX));
-        } else if (this.sprite.position.x - this.game.camera.position.x < -300) {
-            // Pan left with player
-            this.game.panCamera(-Math.abs(this.speedX));
+        // Move camera with player.
+        var cameraOffset = this.sprite.position.x - this.game.camera.position.x;
+        if (cameraOffset > PAN_DISTANCE) {
+            this.game.panCamera(Math.abs(this.speedX) || 0.5);
+        } else if (cameraOffset < -PAN_DISTANCE) {
+            this.game.panCamera(-Math.abs(this.speedX) || -0.5);
         }
 
-        // Gravity on player
+        // Gravity on player.
         if (!this.game.onGround(this)) {
             this.speedY -= 0.7;
         }
 
-        // apply speed to position
+        // Apply speed to position.
         this.sprite.position.x += this.speedX;
 
         var groundBeneath = this.game.getGroundBeneathEntity(this);
@@ -283,7 +338,7 @@ var Player = (function () {
         if (groundBeneath != newGroundBeneath) {
             // collide with old ground beneath
             // we went through groundBeneith, so reset our height to be its.
-            this.sprite.position.y = Math.max(groundBeneath.sprite.position.y, newGroundBeneath.sprite.position.y) + 74;
+            this.sprite.position.y = Math.max(groundBeneath.sprite.position.y, newGroundBeneath.sprite.position.y) + MAGIC_NUMBER;
             this.speedY = 0;
         }
 
@@ -360,19 +415,14 @@ var BackgroundController = (function () {
     return BackgroundController;
 })();
 /// <reference path='lib/three.d.ts'/>
+/// <reference path='consts.ts'/>
 /// <reference path='grid.ts'/>
 /// <reference path='ground.ts'/>
 /// <reference path='atmosphere.ts'/>
 /// <reference path='plant.ts'/>
+/// <reference path='tree.ts'/>
 /// <reference path='player.ts'/>
 /// <reference path='background.ts'/>
-var PLAYER_MAX_SPEED = 8;
-var PLAYER_ACCELERATION = 0.001;
-var JUMP_HEIGHT = 10;
-var MAX_DEPTH = -6;
-var MAX_CATCHUP = 10;
-var BLOCK_SIZE = 32;
-
 var INPUT_MAP = {
     87: 'jump',
     83: 'down',
@@ -428,6 +478,9 @@ var Game = (function () {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        if (tickCount != 0) {
+            this.generateVisibleWorld();
+        }
     };
 
     Game.prototype.handleInput = function () {
@@ -474,7 +527,9 @@ var Game = (function () {
     Game.prototype.addEntity = function (entity) {
         entity.id = ++this.lastEntityId;
         this.entities[entity.id] = entity;
-        this.scene.add(entity.sprite);
+        if (entity.sprite) {
+            this.scene.add(entity.sprite);
+        }
     };
 
     Game.prototype.removeEntity = function (entity) {
@@ -589,16 +644,22 @@ var Game = (function () {
                 var ground = new Ground(x, y);
                 this.terrainGrid.set(x, y, ground);
                 this.addEntity(ground);
-                if (y == -1 && Math.random() < 0.5) {
-                    var plant = new Plant(x, 0);
-                    this.addEntity(plant);
-                    this.plants.push(plant);
+                if (y == -1) {
+                    if (Math.random() < 0.1) {
+                        var plant = new Plant(x, 0);
+                        this.addEntity(plant);
+                        this.plants.push(plant);
 
-                    // Add air around plants
-                    this.atmosphereController.addAir(x, 0);
-                    var points = Grid.neighbors(x, 0, 2);
-                    for (var i = 0; i < points.length; i++) {
-                        this.atmosphereController.addAir(points[i][0], points[i][1]);
+                        // Add air around plants
+                        this.atmosphereController.addAir(x, 0);
+                        var points = Grid.neighbors(x, 0, 2);
+                        for (var i = 0; i < points.length; i++) {
+                            this.atmosphereController.addAir(points[i][0], points[i][1]);
+                        }
+                    }
+                    if (Math.random() < 0.03) {
+                        var tree = new Tree(x, 0);
+                        this.addEntity(tree);
                     }
                 }
             }
@@ -613,7 +674,7 @@ var Game = (function () {
         if (!ground) {
             return false;
         }
-        return entity.sprite.position.y - (ground.sprite.position.y + 74) < 1;
+        return entity.sprite.position.y - (ground.sprite.position.y + MAGIC_NUMBER) < 1;
     };
 
     // Single tick of game time (1 frame)
@@ -625,9 +686,9 @@ var Game = (function () {
         for (var id in this.entities) {
             this.entities[id].tick();
         }
-        for (var bc in this.terrainGrid._grid) {
-            this.terrainGrid._grid[bc].tick();
-        }
+        this.terrainGrid.forEach(function (x, y, ground) {
+            ground.tick();
+        });
         tickCount++;
     };
 

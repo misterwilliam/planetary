@@ -1,17 +1,12 @@
 /// <reference path='lib/three.d.ts'/>
+/// <reference path='consts.ts'/>
 /// <reference path='grid.ts'/>
 /// <reference path='ground.ts'/>
 /// <reference path='atmosphere.ts'/>
 /// <reference path='plant.ts'/>
+/// <reference path='tree.ts'/>
 /// <reference path='player.ts'/>
 /// <reference path='background.ts'/>
-
-var PLAYER_MAX_SPEED = 8;
-var PLAYER_ACCELERATION = 0.001;
-var JUMP_HEIGHT = 10;
-var MAX_DEPTH = -6;
-var MAX_CATCHUP = 10;
-var BLOCK_SIZE = 32;
 
 var INPUT_MAP = {
   87:  'jump',  // w
@@ -76,6 +71,9 @@ class Game {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    if (tickCount != 0) {
+      this.generateVisibleWorld();
+    }
   }
 
   handleInput() {
@@ -124,7 +122,9 @@ class Game {
   addEntity(entity:Entity) {
     entity.id = ++this.lastEntityId;
     this.entities[entity.id] = entity;
-    this.scene.add(entity.sprite);
+    if (entity.sprite) {
+      this.scene.add(entity.sprite);
+    }
   }
 
   removeEntity(entity:Entity) {
@@ -240,16 +240,22 @@ class Game {
         var ground = new Ground(x, y);
         this.terrainGrid.set(x, y, ground);
         this.addEntity(ground);
-        if (y == -1 && Math.random() < 0.5) {
-          var plant = new Plant(x, 0);
-          this.addEntity(plant);
-          this.plants.push(plant);
+        if (y == -1) {
+          if (Math.random() < 0.1) {
+            var plant = new Plant(x, 0);
+            this.addEntity(plant);
+            this.plants.push(plant);
 
-          // Add air around plants
-          this.atmosphereController.addAir(x, 0);
-          var points = Grid.neighbors(x, 0, 2);
-          for (var i = 0; i < points.length; i++) {
-            this.atmosphereController.addAir(points[i][0], points[i][1]);
+            // Add air around plants
+            this.atmosphereController.addAir(x, 0);
+            var points = Grid.neighbors(x, 0, 2);
+            for (var i = 0; i < points.length; i++) {
+              this.atmosphereController.addAir(points[i][0], points[i][1]);
+            }
+          }
+          if (Math.random() < 0.03) {
+            var tree = new Tree(x, 0);
+            this.addEntity(tree);
           }
         }
       }
@@ -265,7 +271,7 @@ class Game {
     if (!ground) {
       return false;
     }
-    return entity.sprite.position.y - (ground.sprite.position.y + 74) < 1;
+    return entity.sprite.position.y - (ground.sprite.position.y + MAGIC_NUMBER) < 1;
   }
 
   // Single tick of game time (1 frame)
@@ -277,9 +283,9 @@ class Game {
     for (var id in this.entities) {
       this.entities[id].tick();
     }
-    for (var bc in this.terrainGrid._grid) {
-      this.terrainGrid._grid[bc].tick();
-    }
+    this.terrainGrid.forEach((x, y, ground) => {
+      ground.tick();
+    })
     tickCount++;
   }
 
