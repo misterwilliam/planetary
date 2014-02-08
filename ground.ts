@@ -12,6 +12,7 @@ interface WorldGenerator {
 }
 
 class Chunk extends Grid<Ground> {
+  plants : Plant[] = [];
   constructor(public chunkX:number, public chunkY:number) {
     super();
   }
@@ -26,6 +27,7 @@ class Chunk extends Grid<Ground> {
 class FlatEarth implements WorldGenerator {
 
   generateChunk(chunkX:number, chunkY:number) {
+    var rng = new Math.seedrandom('loo');
     // once we're doing terrain generation, we should do something with the
     // seed and chunkX and chunkY to consistently generate the same terrain here
     var chunk = new Chunk(chunkX, chunkY);
@@ -41,6 +43,12 @@ class FlatEarth implements WorldGenerator {
         if (absoluteY <= 0) { // below ground, there's ground
           chunk.set(intrachunkx, intrachunky, new Ground(absoluteX, absoluteY));
         }
+
+        if (absoluteY == 0 && rng() < 0.1) {
+          var plant = new Plant(absoluteX, 1);
+          chunk.plants.push(plant);
+        }
+
       }
     }
     return chunk;

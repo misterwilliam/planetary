@@ -1,4 +1,5 @@
 /// <reference path='lib/three.d.ts'/>
+/// <reference path='lib/seedrandom.d.ts'/>
 /// <reference path='consts.ts'/>
 /// <reference path='grid.ts'/>
 /// <reference path='ground.ts'/>
@@ -57,7 +58,7 @@ class Game {
   projector = new THREE.Projector();
   atmosphereController = new AtmosphereController(this.scene);
   player : Player;
-  plants : Plant[];
+  plants : Plant[] = [];
   debugSprites : THREE.Object3D[];
   terrainStore = new TerrainStore(new FlatEarth());
   activeChunks = new Grid<Chunk>();
@@ -255,17 +256,13 @@ class Game {
       }
     }
 
-    // for (var x = topLeft[0]; x <= bottomRight[0]; x++) {
-    //   for (var y = Math.min(topLeft[1], -1); y >= bottomRight[1]; y--) {
-    //     if (this.terrainGrid.has(x, y)) {
-    //       continue;
-    //     }
-    //     numNew++;
-    //     var ground = new Ground(x, y);
-    //     this.terrainGrid.set(x, y, ground);
-    //     this.addEntity(ground);
-    //   }
-    // }
+    this.activeChunks.forEach((x, y, chunk) => {
+      if (x < topLeftChunkCoords[0] || x > bottomRightChunkCoords[0] ||
+          y > topLeftChunkCoords[1] || y < bottomRightChunkCoords[1]) {
+        this.removeChunk(chunk);
+      }
+    });
+
     if (this.debug && numNew > 0) {
       console.log('generated', numNew, 'blocks',
                   'from', topLeft, 'to', bottomRight);
@@ -277,7 +274,18 @@ class Game {
     chunk.forEach((x, y, ground) => {
       this.terrainGrid.set(ground.x, ground.y, ground);
       this.addEntity(ground);
-    })
+    });
+    chunk.plants.forEach((plant) => {
+      this.plants.push(plant);
+      this.addEntity(plant);
+
+      // Add air around plants
+      this.atmosphereController.addAir(plant.x, 0);
+      var points = Grid.neighbors(plant.x, 0, 2);
+      for (var i = 0; i < points.length; i++) {
+        this.atmosphereController.addAir(points[i][0], points[i][1]);
+      }
+    });
   }
 
   removeChunk(chunk:Chunk) {
@@ -285,6 +293,12 @@ class Game {
     chunk.forEach((x, y, ground) => {
       this.terrainGrid.clear(ground.x, ground.y);
       this.removeEntity(ground);
+    });
+    chunk.plants.forEach((plant) => {
+      this.removeEntity(plant);
+      // TODO: remove plants from this.plants
+      // TODO: remove atmosphere from around plants,
+      //       or just in the chunk in general?
     });
   }
 
@@ -320,7 +334,7 @@ class Game {
     for (var id in this.entities) {
       this.entities[id].tick();
     }
-    if (tickCount % 600 == 0) {
+    if (tickCount % 600 == 10) {
       console.log(this.scene.children.length, " objects in scene");
     }
     tickCount++;
