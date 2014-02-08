@@ -1,4 +1,5 @@
 /// <reference path='lib/three.d.ts'/>
+/// <reference path='air-generator.ts'/>
 /// <reference path='consts.ts'/>
 /// <reference path='grid.ts'/>
 /// <reference path='ground.ts'/>
@@ -229,6 +230,8 @@ class Game {
   }
 
   generateWorld(topLeft:number[], bottomRight:number[]) {
+    var airGenerator = new AirGenerator(5, 7);
+    this.addEntity(airGenerator);
     this.plants = [];
     var numNew = 0;
     for (var x = topLeft[0]; x <= bottomRight[0]; x++) {
