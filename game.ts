@@ -122,7 +122,9 @@ class Game {
   addEntity(entity:Entity) {
     entity.id = ++this.lastEntityId;
     this.entities[entity.id] = entity;
-    this.scene.add(entity.sprite);
+    if (entity.sprite) {
+      this.scene.add(entity.sprite);
+    }
   }
 
   removeEntity(entity:Entity) {
@@ -251,10 +253,9 @@ class Game {
               this.atmosphereController.addAir(points[i][0], points[i][1]);
             }
           }
-          if (Math.random() < 0.1) {
+          if (Math.random() < 0.03) {
             var tree = new Tree(x, 0);
             this.addEntity(tree);
-            this.plants.push(tree);
           }
         }
       }
