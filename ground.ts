@@ -8,20 +8,20 @@ var WET_MATERIAL = new THREE.SpriteMaterial({
 });
 
 interface WorldGenerator {
-  generateChunk(chunkX:number, chunkY:number):Grid<Ground>;
+  generateChunk(chunkX:number, chunkY:number):Chunk;
 }
 
 class FlatEarth implements WorldGenerator {
 
-  generateChunk(chunkX:number, y:number) {
+  generateChunk(chunkX:number, chunkY:number) {
     // once we're doing terrain generation, we should do something with the
-    // seed and chunkX and y to consistently generate the same terrain here
-    var chunk = new Grid<Ground>();
-    if (y > 0) {
+    // seed and chunkX and chunkY to consistently generate the same terrain here
+    var chunk = new Chunk(chunkX, chunkY);
+    if (chunkY > 0) {
       return chunk;  // pure empty air
     }
     var baseX = chunkX * 64;
-    var baseY = y * 64;
+    var baseY = chunkY * 64;
     for (var intrachunkx = 0; intrachunkx < 64; intrachunkx++) {
       for (var intrachunky = 0; intrachunky < 64; intrachunky++) {
         var absoluteX = baseX + intrachunkx;
@@ -36,7 +36,7 @@ class FlatEarth implements WorldGenerator {
 }
 
 class TerrainStore {
-  modifiedChunks = new Grid<Grid<Ground>>();
+  modifiedChunks = new Grid<Chunk>();
   constructor(public worldGenerator:WorldGenerator) {}
 
   onAdd(x:number, y:number, ground:Ground) {

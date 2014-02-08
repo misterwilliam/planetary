@@ -11,7 +11,9 @@ var PLAYER_ACCELERATION = 0.001;
 var JUMP_HEIGHT = 10;
 var MAX_DEPTH = -6;
 var MAX_CATCHUP = 10;
-var BLOCK_SIZE = 64;
+var BLOCK_SIZE = 32;
+var CHUNK_SIZE = 64;
+var MAGIC_NUMBER = 56;
 
 var INPUT_MAP = {
   87:  'jump',  // w
@@ -78,6 +80,9 @@ class Game {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    if (tickCount > 0){
+      this.generateVisibleWorld();
+    }
   }
 
   handleInput() {
@@ -251,18 +256,18 @@ class Game {
   }
 
   addPlants() {
-    // if (y == -1 && Math.random() < 0.5) {
-    //   var plant = new Plant(x, 0);
-    //   this.addEntity(plant);
-    //   this.plants.push(plant);
+        // if (y == -1 && Math.random() < 0.1) {
+        //   var plant = new Plant(x, 0);
+        //   this.addEntity(plant);
+        //   this.plants.push(plant);
 
-    //   // Add air around plants
-    //   this.atmosphereController.addAir(x, 0);
-    //   var points = Grid.neighbors(x, 0, 2);
-    //   for (var i = 0; i < points.length; i++) {
-    //     this.atmosphereController.addAir(points[i][0], points[i][1]);
-    //   }
-    // }
+        //   // Add air around plants
+        //   this.atmosphereController.addAir(x, 0);
+        //   var points = Grid.neighbors(x, 0, 2);
+        //   for (var i = 0; i < points.length; i++) {
+        //     this.atmosphereController.addAir(points[i][0], points[i][1]);
+        //   }
+        // }
   }
 
   onGround(entity:Entity) : boolean {
@@ -270,7 +275,7 @@ class Game {
     if (!ground) {
       return false;
     }
-    return entity.sprite.position.y - (ground.sprite.position.y + 74) < 1;
+    return entity.sprite.position.y - (ground.sprite.position.y + MAGIC_NUMBER) < 1;
   }
 
   // Single tick of game time (1 frame)
@@ -282,9 +287,9 @@ class Game {
     for (var id in this.entities) {
       this.entities[id].tick();
     }
-    for (var bc in this.terrainGrid._grid) {
-      this.terrainGrid._grid[bc].tick();
-    }
+    this.terrainGrid.forEach((x, y, ground) => {
+      ground.tick();
+    })
     tickCount++;
   }
 
@@ -322,7 +327,7 @@ class Game {
     }
   }
 
-  drawLine(from:number[], to:number[], color?:number) : THREE.Line {
+  drawLine(from:number[], to:number[], color:number=null) : THREE.Line {
     var material = new THREE.LineBasicMaterial({color: color || null});
     var geometry = new THREE.Geometry();
     geometry.vertices.push(new THREE.Vector3(from[0], from[1], 1));
@@ -332,7 +337,7 @@ class Game {
     return line;
   }
 
-  drawRect(cornerA:number[], cornerB:number[], color?:number) : THREE.Line {
+  drawRect(cornerA:number[], cornerB:number[], color:number=null) : THREE.Line {
     var material = new THREE.LineBasicMaterial({color: color || null});
     var geometry = new THREE.Geometry();
     geometry.vertices.push(new THREE.Vector3(cornerA[0], cornerA[1], 1));
@@ -351,6 +356,16 @@ class Game {
       [lc[0] - BLOCK_SIZE / 2, lc[1] - BLOCK_SIZE / 2],
       [lc[0] + BLOCK_SIZE / 2, lc[1] + BLOCK_SIZE / 2],
       color);
+  }
+
+  outlineChunk(chunk:Chunk, color?:number) {
+    var topLeftBlockX = chunk.chunkX * CHUNK_SIZE;
+    var topLeftBlockY = chunk.chunkY * CHUNK_SIZE;
+    var bottomRightBlockX = (chunk.chunkX + 1) * CHUNK_SIZE;
+    var bottomRightBlockY = (chunk.chunkY + 1) * CHUNK_SIZE;
+    var tlLc = this.blockToLocal(topLeftBlockX, topLeftBlockY);
+    var brLc = this.blockToLocal(bottomRightBlockX + 1, bottomRightBlockY + 1)
+    return this.drawRect(tlLc, brLc);
   }
 }
 

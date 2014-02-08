@@ -12,7 +12,7 @@ class Plant implements Entity {
   constructor(public x:number, public y:number) {
     var lc = game.blockToLocal(x, y);
     this.sprite.position.set(lc[0], lc[1], 0);
-    this.sprite.scale.set(64, 64, 1.0);
+    this.sprite.scale.set(13 * 4, 21 * 4, 1.0);
   }
 
   tick() {
