@@ -371,7 +371,7 @@ var PLAYER_ACCELERATION = 0.001;
 var JUMP_HEIGHT = 10;
 var MAX_DEPTH = -6;
 var MAX_CATCHUP = 10;
-var BLOCK_SIZE = 64;
+var BLOCK_SIZE = 32;
 
 var INPUT_MAP = {
     87: 'jump',
