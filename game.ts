@@ -68,7 +68,7 @@ class Game {
   plants : Plant[];
   debugSprites : THREE.Object3D[];
   terrainStore = new TerrainStore(new FlatEarth());
-  activeChunks = new Grid<Grid<Ground>>();
+  activeChunks = new Grid<Chunk>();
 
   constructor() {
     this.camera.position.set(0, 0, 800);
@@ -148,6 +148,14 @@ class Game {
     ];
   }
 
+  // Returns the coords of the top left corner of the given block coords.
+  blockToLocalCorner(x:number, y:number):number[] {
+    return [
+      (x * BLOCK_SIZE) - (BLOCK_SIZE / 2),
+      (y * BLOCK_SIZE) - (BLOCK_SIZE / 2)
+    ]
+  }
+
   // Returns nearest block coordinates from local GL coordinates. Right and top
   // blocks win on edges.
   localToBlock(x:number, y:number):number[] {
@@ -173,7 +181,13 @@ class Game {
       var bc = this.localToBlock(lc.x, lc.y);
       console.log('clicked block', bc);
       var outline = game.outlineBlock(bc[0], bc[1], 0x00ff00);
-      setTimeout(function() {game.scene.remove(outline)}, 1000);
+      var cc = Chunk.blockToChunk(bc);
+      var chunkOutline = game.outlineChunk(
+          this.terrainStore.getChunk(cc[0], cc[1]), 0x00ff00);
+      setTimeout(() => {
+        game.scene.remove(outline);
+        game.scene.remove(chunkOutline);
+      }, 1000);
     }
   }
 
@@ -230,29 +244,56 @@ class Game {
   generateVisibleWorld() {
     var topLeftLc = this.ndcToLocal(-1, 1);
     var bottomRightLc = this.ndcToLocal(1, -1);
-    var topLeftBc = this.localToBlock(topLeftLc.x, topLeftLc.y);
-    var bottomRightBc = this.localToBlock(bottomRightLc.x, bottomRightLc.y);
+    var topLeftBc = this.localToBlock(
+        topLeftLc.x - BLOCK_SIZE, topLeftLc.y - BLOCK_SIZE);
+    var bottomRightBc = this.localToBlock(
+        bottomRightLc.x + BLOCK_SIZE, bottomRightLc.y + BLOCK_SIZE);
     this.generateWorld(topLeftBc, bottomRightBc);
   }
 
   generateWorld(topLeft:number[], bottomRight:number[]) {
     var numNew = 0;
-
-    for (var x = topLeft[0]; x <= bottomRight[0]; x++) {
-      for (var y = Math.min(topLeft[1], -1); y >= bottomRight[1]; y--) {
-        if (this.terrainGrid.has(x, y)) {
-          continue;
+    var topLeftChunkCoords = Chunk.blockToChunk(topLeft);
+    var bottomRightChunkCoords = Chunk.blockToChunk(bottomRight);
+    for (var x = topLeftChunkCoords[0]; x <= bottomRightChunkCoords[0]; x++) {
+      for (var y = topLeftChunkCoords[1]; y >= bottomRightChunkCoords[1]; y--) {
+        if (!this.activeChunks.has(x, y)) {
+          this.addChunk(this.terrainStore.getChunk(x, y));
         }
-        numNew++;
-        var ground = new Ground(x, y);
-        this.terrainGrid.set(x, y, ground);
-        this.addEntity(ground);
       }
     }
+
+    // for (var x = topLeft[0]; x <= bottomRight[0]; x++) {
+    //   for (var y = Math.min(topLeft[1], -1); y >= bottomRight[1]; y--) {
+    //     if (this.terrainGrid.has(x, y)) {
+    //       continue;
+    //     }
+    //     numNew++;
+    //     var ground = new Ground(x, y);
+    //     this.terrainGrid.set(x, y, ground);
+    //     this.addEntity(ground);
+    //   }
+    // }
     if (this.debug && numNew > 0) {
       console.log('generated', numNew, 'blocks',
                   'from', topLeft, 'to', bottomRight);
     }
+  }
+
+  addChunk(chunk:Chunk) {
+    this.activeChunks.set(chunk.chunkX, chunk.chunkY, chunk);
+    chunk.forEach((x, y, ground) => {
+      this.terrainGrid.set(ground.x, ground.y, ground);
+      this.addEntity(ground);
+    })
+  }
+
+  removeChunk(chunk:Chunk) {
+    this.activeChunks.clear(chunk.chunkX, chunk.chunkY);
+    chunk.forEach((x, y, ground) => {
+      this.terrainGrid.clear(ground.x, ground.y);
+      this.removeEntity(ground);
+    });
   }
 
   addPlants() {
@@ -287,10 +328,10 @@ class Game {
     for (var id in this.entities) {
       this.entities[id].tick();
     }
-    this.terrainGrid.forEach((x, y, ground) => {
-      ground.tick();
-    })
     tickCount++;
+    if (tickCount % 60 == 0) {
+      console.log(this.scene.children.length, " objects in scene");
+    }
   }
 
   panCamera(x?:number, y?:number) {
@@ -314,11 +355,10 @@ class Game {
         this.outlineBlock(0, 0, 0x0000ff));
 
       // Origin lines.
-      this.debugSprites.push(
-        this.drawLine([0, 300], [0, -300], 0xff0000));
-      this.debugSprites.push(
-        this.drawLine([300, 0], [-300, 0], 0xff0000));
-
+      // this.debugSprites.push(
+      //   this.drawLine([0, 300], [0, -300], 0xff0000));
+      // this.debugSprites.push(
+      //   this.drawLine([300, 0], [-300, 0], 0xff0000));
     } else {
       var self = this;
       this.debugSprites.forEach(function(sprite) {
@@ -351,10 +391,9 @@ class Game {
   }
 
   outlineBlock(x:number, y:number, color?:number) : THREE.Line {
-    var lc = this.blockToLocal(x, y);
     return this.drawRect(
-      [lc[0] - BLOCK_SIZE / 2, lc[1] - BLOCK_SIZE / 2],
-      [lc[0] + BLOCK_SIZE / 2, lc[1] + BLOCK_SIZE / 2],
+      this.blockToLocalCorner(x, y),
+      this.blockToLocalCorner(x+1, y+1),
       color);
   }
 
@@ -363,9 +402,10 @@ class Game {
     var topLeftBlockY = chunk.chunkY * CHUNK_SIZE;
     var bottomRightBlockX = (chunk.chunkX + 1) * CHUNK_SIZE;
     var bottomRightBlockY = (chunk.chunkY + 1) * CHUNK_SIZE;
-    var tlLc = this.blockToLocal(topLeftBlockX, topLeftBlockY);
-    var brLc = this.blockToLocal(bottomRightBlockX + 1, bottomRightBlockY + 1)
-    return this.drawRect(tlLc, brLc);
+    var tlLc = this.blockToLocalCorner(topLeftBlockX, topLeftBlockY);
+    var brLc = this.blockToLocalCorner(bottomRightBlockX, bottomRightBlockY)
+    console.log(tlLc, brLc);
+    return this.drawRect(tlLc, brLc, color);
   }
 }
 

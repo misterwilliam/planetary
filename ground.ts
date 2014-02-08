@@ -53,13 +53,15 @@ class TerrainStore {
     chunk.clear(intrachunkx, intrachunky);
   }
 
-  getChunk(x:number, y:number) {
-    var chunkx = Math.floor(x / 64);
-    var chunky = Math.floor(y / 64);
-    var chunk = this.modifiedChunks.get(chunkx, chunky);
+  /**
+    * Get or generate a chunk of the world.
+    */
+  getChunk(chunkX:number, chunkY:number) {
+    var chunk = this.modifiedChunks.get(chunkX, chunkY);
     if (!chunk) {
-      chunk = this.worldGenerator.generateChunk(chunkx, chunky);
+      chunk = this.worldGenerator.generateChunk(chunkX, chunkY);
     }
+
     return chunk;
   }
 

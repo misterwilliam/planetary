@@ -1,5 +1,6 @@
 var DUDE_MATERIAL = LoadJaggyMaterial('images/dude.png');
 var FLASH_MATERIAL = LoadJaggyMaterial('images/flash.png')
+var NEGINFINITY = -(1 / 0)
 
 class Player implements Entity {
   speedX = 0;
@@ -40,7 +41,11 @@ class Player implements Entity {
     if (groundBeneath != newGroundBeneath) {
       // collide with old ground beneath
       // we went through groundBeneith, so reset our height to be its.
-      this.sprite.position.y = Math.max(groundBeneath.sprite.position.y, newGroundBeneath.sprite.position.y) + MAGIC_NUMBER;
+      var oldGroundY = groundBeneath ?
+          groundBeneath.sprite.position.y : NEGINFINITY;
+      var newGroundY = newGroundBeneath ?
+          newGroundBeneath.sprite.position.y : NEGINFINITY;
+      this.sprite.position.y = Math.max(oldGroundY, newGroundY) + MAGIC_NUMBER;
       this.speedY = 0;
     }
 
