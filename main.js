@@ -287,6 +287,22 @@ var AtmosphereController = (function () {
     };
     return AtmosphereController;
 })();
+var BOAR_MATERIAL = LoadJaggyMaterial('images/boar.png');
+
+var Boar = (function () {
+    function Boar(x, y) {
+        this.x = x;
+        this.y = y;
+        this.sprite = new THREE.Sprite(BOAR_MATERIAL);
+        this.id = -1;
+        var lc = game.blockToLocal(x, y);
+        this.sprite.position.set(lc[0], lc[1] + 15, -1);
+        this.sprite.scale.set(4 * 32, 4 * 32, 1.0);
+    }
+    Boar.prototype.tick = function () {
+    };
+    return Boar;
+})();
 var GREEN_MATERIAL = LoadJaggyMaterial('images/plant.png');
 var BROWN_MATERIAL = LoadJaggyMaterial('images/plant-brown.png');
 var BLACK_MATERIAL = LoadJaggyMaterial('images/plant-black.png');
@@ -502,6 +518,7 @@ var BackgroundController = (function () {
 /// <reference path='ground.ts'/>
 /// <reference path='air-generator.ts'/>
 /// <reference path='atmosphere.ts'/>
+/// <reference path='boar.ts'/>
 /// <reference path='plant.ts'/>
 /// <reference path='tree.ts'/>
 /// <reference path='player.ts'/>
@@ -700,6 +717,9 @@ var Game = (function () {
 
         var airGenerator = new AirGenerator(5, 7);
         this.addEntity(airGenerator);
+
+        var boar = new Boar(-5, 2);
+        this.addEntity(boar);
 
         window.addEventListener('keydown', this.handleKey.bind(this));
         window.addEventListener('keyup', this.handleKey.bind(this));
