@@ -71,6 +71,7 @@ class Game {
   terrainStore = new TerrainStore(new FlatEarth());
   hasRendered = false;
   removeSprites : {ticks:number; sprite:THREE.Object3D}[] = [];
+  cameraDeadzone = new THREE.Vector2(1000, 1000);
 
   constructor() {
     this.camera.position.set(0, 0, 800);
@@ -82,6 +83,8 @@ class Game {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.cameraDeadzone = new THREE.Vector2(
+        window.innerWidth / 5, window.innerHeight / 5);
     if (tickCount != 0) {
       this.generateVisibleWorld();
     }
