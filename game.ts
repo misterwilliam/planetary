@@ -1,4 +1,5 @@
 /// <reference path='lib/three.d.ts'/>
+/// <reference path='lib/seedrandom.d.ts'/>
 /// <reference path='consts.ts'/>
 /// <reference path='grid.ts'/>
 /// <reference path='ground.ts'/>
@@ -41,6 +42,12 @@ interface Entity {
   id : number
 }
 
+interface BlockAlignedEntity extends Entity {
+  // x and y are in blockspace
+  x: number;
+  y: number;
+}
+
 class Game {
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(90, null, 0.1, 1000);
@@ -59,8 +66,10 @@ class Game {
   projector = new THREE.Projector();
   atmosphereController = new AtmosphereController(this.scene);
   player : Player;
-  plants : Plant[];
+  plants : Plant[] = [];
   debugSprites : THREE.Object3D[];
+  terrainStore = new TerrainStore(new FlatEarth());
+  hasRendered = false;
 
   constructor() {
     this.camera.position.set(0, 0, 800);
@@ -142,6 +151,14 @@ class Game {
     ];
   }
 
+  // Returns the coords of the top left corner of the given block coords.
+  blockToLocalCorner(x:number, y:number):number[] {
+    return [
+      (x * BLOCK_SIZE) - (BLOCK_SIZE / 2),
+      (y * BLOCK_SIZE) - (BLOCK_SIZE / 2)
+    ]
+  }
+
   // Returns nearest block coordinates from local GL coordinates. Right and top
   // blocks win on edges.
   localToBlock(x:number, y:number):number[] {
@@ -154,6 +171,9 @@ class Game {
   // Returns local GL coordinates on the ground plane from normalized device
   // coordinates.
   ndcToLocal(x:number, y:number) {
+    if (!this.hasRendered) {
+      throw new Error('Must have rendered before calling ndcToLocal');
+    }
     var ndc = new THREE.Vector3(x, y, null);
     var raycaster = this.projector.pickingRay(ndc, this.camera);
     return raycaster.ray.intersectPlane(this.groundPlane);
@@ -165,9 +185,16 @@ class Game {
         (event.clientX / window.innerWidth) * 2 - 1,
         -(event.clientY / window.innerHeight) * 2 + 1);
       var bc = this.localToBlock(lc.x, lc.y);
-      console.log('clicked block', bc);
       var outline = game.outlineBlock(bc[0], bc[1], 0x00ff00);
-      setTimeout(function() {game.scene.remove(outline)}, 1000);
+      var cc = Chunk.blockToChunk(bc);
+      var chunk = this.terrainStore.getChunk(cc[0], cc[1]);
+      var chunkOutline = game.outlineChunk(chunk, 0x00ff00);
+
+      console.log('clicked block', bc, ' chunk ', cc, ' intrachunk ', chunk.getIntraChunkBlockCoords(bc[0], bc[1]));
+      setTimeout(() => {
+        game.scene.remove(outline);
+        game.scene.remove(chunkOutline);
+      }, 1000);
     }
   }
 
@@ -221,54 +248,76 @@ class Game {
 
   // Renders a single frame
   render() {
+    this.hasRendered = true;
     this.renderer.render(this.scene, this.camera);
   }
 
   generateVisibleWorld() {
     var topLeftLc = this.ndcToLocal(-1, 1);
     var bottomRightLc = this.ndcToLocal(1, -1);
-    var topLeftBc = this.localToBlock(topLeftLc.x, topLeftLc.y);
-    var bottomRightBc = this.localToBlock(bottomRightLc.x, bottomRightLc.y);
+    var topLeftBc = this.localToBlock(
+        topLeftLc.x - BLOCK_SIZE, topLeftLc.y - BLOCK_SIZE);
+    var bottomRightBc = this.localToBlock(
+        bottomRightLc.x + BLOCK_SIZE, bottomRightLc.y + BLOCK_SIZE);
     this.generateWorld(topLeftBc, bottomRightBc);
   }
 
   generateWorld(topLeft:number[], bottomRight:number[]) {
-    this.plants = [];
     var numNew = 0;
-    for (var x = topLeft[0]; x <= bottomRight[0]; x++) {
-      for (var y = Math.min(topLeft[1], -1); y >= bottomRight[1]; y--) {
-        if (this.terrainGrid.has(x, y)) {
-          continue;
-        }
-        numNew++;
-        var ground = new Ground(x, y);
-        this.terrainGrid.set(x, y, ground);
-        this.addEntity(ground);
-        if (y == -1) {
-          if (Math.random() < 0.1) {
-            var plant = new Plant(x, 0);
-            this.addEntity(plant);
-            this.plants.push(plant);
-
-            // Add air around plants
-            this.atmosphereController.addAir(x, 0);
-            var points = Grid.neighbors(x, 0, 2);
-            for (var i = 0; i < points.length; i++) {
-              this.atmosphereController.addAir(points[i][0], points[i][1]);
-            }
-          }
-          if (Math.random() < 0.03) {
-            var tree = new Tree(x, 0);
-            this.addEntity(tree);
-          }
+    var topLeftChunkCoords = Chunk.blockToChunk(topLeft);
+    var bottomRightChunkCoords = Chunk.blockToChunk(bottomRight);
+    for (var x = topLeftChunkCoords[0]; x <= bottomRightChunkCoords[0]; x++) {
+      for (var y = topLeftChunkCoords[1]; y >= bottomRightChunkCoords[1]; y--) {
+        if (!this.terrainStore.activeChunks.has(x, y)) {
+          this.addChunk(this.terrainStore.getChunk(x, y));
         }
       }
     }
+
+    this.terrainStore.activeChunks.forEach((x, y, chunk) => {
+      if (x < topLeftChunkCoords[0] || x > bottomRightChunkCoords[0] ||
+          y > topLeftChunkCoords[1] || y < bottomRightChunkCoords[1]) {
+        this.removeChunk(chunk);
+      }
+    });
+
     if (this.debug && numNew > 0) {
       console.log('generated', numNew, 'blocks',
                   'from', topLeft, 'to', bottomRight);
     }
   }
+
+  addChunk(chunk:Chunk) {
+    this.terrainStore.activeChunks.set(chunk.chunkX, chunk.chunkY, chunk);
+    chunk.forEach((x, y, ground) => {
+      this.terrainGrid.set(ground.x, ground.y, ground);
+      this.addEntity(ground);
+    });
+    chunk.plants.forEach((plant) => {
+      this.addEntity(plant);
+
+      // Add air around plants
+      this.atmosphereController.addAir(plant.x, 0);
+      var points = Grid.neighbors(plant.x, 0, 2);
+      for (var i = 0; i < points.length; i++) {
+        this.atmosphereController.addAir(points[i][0], points[i][1]);
+      }
+    });
+  }
+
+  removeChunk(chunk:Chunk) {
+    this.terrainStore.activeChunks.clear(chunk.chunkX, chunk.chunkY);
+    chunk.forEach((x, y, ground) => {
+      this.terrainGrid.clear(ground.x, ground.y);
+      this.removeEntity(ground);
+    });
+    chunk.plants.forEach((plant) => {
+      this.removeEntity(plant);
+      // TODO: remove atmosphere from around plants,
+      //       or just in the chunk in general?
+    });
+  }
+
 
   onGround(entity:Entity) : boolean {
     var ground = this.getGroundBeneathEntity(entity);
@@ -281,15 +330,15 @@ class Game {
   // Single tick of game time (1 frame)
   tick() {
     this.handleInput();
-    if (tickCount == 1) {
+    if (this.hasRendered) {
       this.generateVisibleWorld();
     }
     for (var id in this.entities) {
       this.entities[id].tick();
     }
-    this.terrainGrid.forEach((x, y, ground) => {
-      ground.tick();
-    })
+    if (tickCount % 600 == 10) {
+      console.log(this.scene.children.length, " objects in scene");
+    }
     tickCount++;
   }
 
@@ -314,11 +363,10 @@ class Game {
         this.outlineBlock(0, 0, 0x0000ff));
 
       // Origin lines.
-      this.debugSprites.push(
-        this.drawLine([0, 300], [0, -300], 0xff0000));
-      this.debugSprites.push(
-        this.drawLine([300, 0], [-300, 0], 0xff0000));
-
+      // this.debugSprites.push(
+      //   this.drawLine([0, 300], [0, -300], 0xff0000));
+      // this.debugSprites.push(
+      //   this.drawLine([300, 0], [-300, 0], 0xff0000));
     } else {
       var self = this;
       this.debugSprites.forEach(function(sprite) {
@@ -327,7 +375,7 @@ class Game {
     }
   }
 
-  drawLine(from:number[], to:number[], color?:number) : THREE.Line {
+  drawLine(from:number[], to:number[], color:number=null) : THREE.Line {
     var material = new THREE.LineBasicMaterial({color: color || null});
     var geometry = new THREE.Geometry();
     geometry.vertices.push(new THREE.Vector3(from[0], from[1], 1));
@@ -337,7 +385,7 @@ class Game {
     return line;
   }
 
-  drawRect(cornerA:number[], cornerB:number[], color?:number) : THREE.Line {
+  drawRect(cornerA:number[], cornerB:number[], color:number=null) : THREE.Line {
     var material = new THREE.LineBasicMaterial({color: color || null});
     var geometry = new THREE.Geometry();
     geometry.vertices.push(new THREE.Vector3(cornerA[0], cornerA[1], 1));
@@ -351,11 +399,21 @@ class Game {
   }
 
   outlineBlock(x:number, y:number, color?:number) : THREE.Line {
-    var lc = this.blockToLocal(x, y);
     return this.drawRect(
-      [lc[0] - BLOCK_SIZE / 2, lc[1] - BLOCK_SIZE / 2],
-      [lc[0] + BLOCK_SIZE / 2, lc[1] + BLOCK_SIZE / 2],
+      this.blockToLocalCorner(x, y),
+      this.blockToLocalCorner(x+1, y+1),
       color);
+  }
+
+  outlineChunk(chunk:Chunk, color?:number) {
+    var topLeftBlockX = chunk.chunkX * CHUNK_SIZE;
+    var topLeftBlockY = chunk.chunkY * CHUNK_SIZE;
+    var bottomRightBlockX = (chunk.chunkX + 1) * CHUNK_SIZE;
+    var bottomRightBlockY = (chunk.chunkY + 1) * CHUNK_SIZE;
+    var tlLc = this.blockToLocalCorner(topLeftBlockX, topLeftBlockY);
+    var brLc = this.blockToLocalCorner(bottomRightBlockX, bottomRightBlockY)
+    console.log(tlLc, brLc);
+    return this.drawRect(tlLc, brLc, color);
   }
 }
 
