@@ -5,6 +5,7 @@
 /// <reference path='ground.ts'/>
 /// <reference path='air-generator.ts'/>
 /// <reference path='atmosphere.ts'/>
+/// <reference path='boar.ts'/>
 /// <reference path='plant.ts'/>
 /// <reference path='tree.ts'/>
 /// <reference path='player.ts'/>
@@ -222,6 +223,9 @@ class Game {
 
     var airGenerator = new AirGenerator(5, 7);
     this.addEntity(airGenerator);
+
+    var boar = new Boar(-5, 2);
+    this.addEntity(boar);
 
     window.addEventListener('keydown', this.handleKey.bind(this));
     window.addEventListener('keyup', this.handleKey.bind(this));
