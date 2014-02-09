@@ -415,11 +415,16 @@ var Player = (function () {
     }
     Player.prototype.tick = function () {
         // Move camera with player.
-        var cameraOffset = this.sprite.position.x - this.game.camera.position.x;
-        if (cameraOffset > PAN_DISTANCE) {
-            this.game.panCamera(Math.abs(this.speedX) || 0.5);
-        } else if (cameraOffset < -PAN_DISTANCE) {
-            this.game.panCamera(-Math.abs(this.speedX) || -0.5);
+        if (game.hasRendered) {
+            var cameraOffset = this.sprite.position.clone().sub(this.game.camera.position);
+            var cameraMotion = new THREE.Vector2(0, 0);
+            if (Math.abs(cameraOffset.x) > game.cameraDeadzone.x) {
+                cameraMotion.x = cameraOffset.x * 0.1;
+            }
+            if (Math.abs(cameraOffset.y) > game.cameraDeadzone.y) {
+                cameraMotion.y = cameraOffset.y * 0.1;
+            }
+            this.game.panCamera(cameraMotion.x, cameraMotion.y);
         }
 
         // Gravity on player.
@@ -479,7 +484,7 @@ var Player = (function () {
 
     Player.prototype.dig = function () {
         var now = getNow();
-        if (now - 650 < this.lastDig) {
+        if (now - 10 < this.lastDig) {
             return;
         }
         this.lastDig = now;
@@ -574,6 +579,7 @@ var Game = (function () {
         this.terrainStore = new TerrainStore(new FlatEarth());
         this.hasRendered = false;
         this.removeSprites = [];
+        this.cameraDeadzone = new THREE.Vector2(1000, 1000);
         this.camera.position.set(0, 0, 800);
         this.resize();
         document.body.appendChild(this.renderer.domElement);
@@ -582,6 +588,7 @@ var Game = (function () {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.cameraDeadzone = new THREE.Vector2(window.innerWidth / 5, window.innerHeight / 5);
         if (tickCount != 0) {
             this.generateVisibleWorld();
         }
