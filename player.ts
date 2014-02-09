@@ -69,6 +69,10 @@ class Player implements Entity {
       var bc = game.localToBlock(this.sprite.position.x,
                                     this.sprite.position.y);
       game.addSpriteForTicks(game.outlineBlock(bc[0], bc[1]), 30);
+
+      var boundingBox = game.boundingBox(this);
+      game.addSpriteForTicks(
+        game.drawRect(boundingBox[0], boundingBox[1], 0x00ff00), 1);
     }
   }
 

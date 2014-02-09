@@ -41,8 +41,7 @@ class FlatEarth implements WorldGenerator {
 
   generateChunk(chunkX:number, chunkY:number) {
     var rng = new Math.seedrandom('loo' + chunkX + ';' + chunkY);
-    // once we're doing terrain generation, we should do something with the
-    // seed and chunkX and chunkY to consistently generate the same terrain here
+
     var chunk = new Chunk(chunkX, chunkY);
     if (chunkY > 0) {
       return chunk;  // pure empty air
