@@ -68,8 +68,7 @@ class Player implements Entity {
     if (game.debug) {
       var bc = game.localToBlock(this.sprite.position.x,
                                     this.sprite.position.y);
-      var outline : THREE.Line = game.outlineBlock(bc[0], bc[1]);
-      setTimeout(function() {game.scene.remove(outline)}, 500);
+      game.addSpriteForTicks(game.outlineBlock(bc[0], bc[1]), 30);
     }
   }
 
@@ -95,10 +94,7 @@ class Player implements Entity {
     flashSprite.position.set(this.sprite.position.x,
                              this.sprite.position.y - 30,
                              1);
-    game.scene.add(flashSprite);
-    setTimeout(function() {
-      game.scene.remove(flashSprite);
-    }, 100);
+    game.addSpriteForTicks(flashSprite, 10);
 
     var ground = this.game.getGroundBeneathEntity(this);
     if (ground) {

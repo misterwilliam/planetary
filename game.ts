@@ -70,6 +70,7 @@ class Game {
   debugSprites : THREE.Object3D[];
   terrainStore = new TerrainStore(new FlatEarth());
   hasRendered = false;
+  removeSprites : {ticks:number; sprite:THREE.Object3D}[] = [];
 
   constructor() {
     this.camera.position.set(0, 0, 800);
@@ -142,6 +143,11 @@ class Game {
     delete this.entities[entity.id];
   }
 
+  addSpriteForTicks(sprite:THREE.Object3D, ticks:number = 1) {
+    this.scene.add(sprite);
+    this.removeSprites.push({sprite:sprite, ticks:ticks});
+  }
+
   // Returns local GL coordinates of the center of a block from block
   // coordinates.
   blockToLocal(x:number, y:number):number[] {
@@ -185,16 +191,12 @@ class Game {
         (event.clientX / window.innerWidth) * 2 - 1,
         -(event.clientY / window.innerHeight) * 2 + 1);
       var bc = this.localToBlock(lc.x, lc.y);
-      var outline = game.outlineBlock(bc[0], bc[1], 0x00ff00);
+      this.addSpriteForTicks(game.outlineBlock(bc[0], bc[1], 0x00ff00), 60);
       var cc = Chunk.blockToChunk(bc);
       var chunk = this.terrainStore.getChunk(cc[0], cc[1]);
-      var chunkOutline = game.outlineChunk(chunk, 0x00ff00);
-
-      console.log('clicked block', bc, ' chunk ', cc, ' intrachunk ', chunk.getIntraChunkBlockCoords(bc[0], bc[1]));
-      setTimeout(() => {
-        game.scene.remove(outline);
-        game.scene.remove(chunkOutline);
-      }, 1000);
+      this.addSpriteForTicks(game.outlineChunk(chunk, 0x00ff00), 60)
+      console.log('clicked block', bc, ' chunk ', cc, ' intrachunk ',
+                  chunk.getIntraChunkBlockCoords(bc[0], bc[1]));
     }
   }
 
@@ -336,6 +338,11 @@ class Game {
     for (var id in this.entities) {
       this.entities[id].tick();
     }
+    this.removeSprites.forEach((remove) => {
+      if (remove.ticks-- == 0) {
+        this.scene.remove(remove.sprite);
+      }
+    });
     if (tickCount % 600 == 10) {
       console.log(this.scene.children.length, " objects in scene");
     }
