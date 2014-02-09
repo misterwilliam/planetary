@@ -62,6 +62,7 @@ class Game {
   plants : Plant[];
   debugSprites : THREE.Object3D[];
   hasRendered = false;
+  removeSprites : {ticks:number; sprite:THREE.Object3D}[] = [];
 
   constructor() {
     this.camera.position.set(0, 0, 800);
@@ -134,6 +135,11 @@ class Game {
     delete this.entities[entity.id];
   }
 
+  addSpriteForTicks(sprite:THREE.Object3D, ticks:number = 1) {
+    this.scene.add(sprite);
+    this.removeSprites.push({sprite:sprite, ticks:ticks});
+  }
+
   // Returns local GL coordinates of the center of a block from block
   // coordinates.
   blockToLocal(x:number, y:number):number[] {
@@ -170,8 +176,8 @@ class Game {
         -(event.clientY / window.innerHeight) * 2 + 1);
       var bc = this.localToBlock(lc.x, lc.y);
       console.log('clicked block', bc);
-      var outline = game.outlineBlock(bc[0], bc[1], 0x00ff00);
-      setTimeout(function() {game.scene.remove(outline)}, 1000);
+      this.addSpriteForTicks(
+        game.outlineBlock(bc[0], bc[1], 0x00ff00), 60);
     }
   }
 
@@ -295,6 +301,11 @@ class Game {
     this.terrainGrid.forEach((x, y, ground) => {
       ground.tick();
     })
+    this.removeSprites.forEach((remove) => {
+      if (remove.ticks-- == 0) {
+        this.scene.remove(remove.sprite);
+      }
+    });
     tickCount++;
   }
 
