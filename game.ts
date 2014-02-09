@@ -203,7 +203,7 @@ class Game {
                                entity.sprite.position.y);
     var height = lc[1] - 1;
     while (!this.terrainGrid.has(lc[0], height)) {
-      if (height <= MAX_DEPTH) {
+      if (height <= lc[1]-6) {
         return null;
       }
       height -= 1;
