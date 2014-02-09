@@ -817,7 +817,6 @@ var Game = (function () {
 
     // Single tick of game time (1 frame)
     Game.prototype.tick = function () {
-        var _this = this;
         this.handleInput();
         if (this.hasRendered) {
             this.generateVisibleWorld();
@@ -825,11 +824,13 @@ var Game = (function () {
         for (var id in this.entities) {
             this.entities[id].tick();
         }
-        this.removeSprites.forEach(function (remove) {
+        for (var i = 0; i < this.removeSprites.length; i++) {
+            var remove = this.removeSprites[i];
             if (remove.ticks-- == 0) {
-                _this.scene.remove(remove.sprite);
+                this.scene.remove(remove.sprite);
+                this.removeSprites.splice(i--, 1);
             }
-        });
+        }
         if (tickCount % 600 == 10) {
             console.log(this.scene.children.length, " objects in scene");
         }
