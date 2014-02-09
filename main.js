@@ -4,6 +4,7 @@ var JUMP_HEIGHT = 10;
 var MAX_DEPTH = -6;
 var MAX_CATCHUP = 10;
 var BLOCK_SIZE = 32;
+var CHUNK_SIZE = 16;
 var MAGIC_NUMBER = 56;
 var Grid = (function () {
     function Grid() {
@@ -26,6 +27,13 @@ var Grid = (function () {
             var s = key.split(',');
             f(parseInt(s[0], 10), parseInt(s[1], 10), this._grid[key]);
         }
+    };
+    Grid.prototype.getSize = function () {
+        var i = 0;
+        this.forEach(function () {
+            i++;
+        });
+        return i;
     };
 
     // Returns list of neighboring grid coordinates. If range is passed then
@@ -52,6 +60,12 @@ var Grid = (function () {
     };
     return Grid;
 })();
+var __extends = this.__extends || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    __.prototype = b.prototype;
+    d.prototype = new __();
+};
 var DRY_MATERIAL = new THREE.SpriteMaterial({
     map: THREE.ImageUtils.loadTexture('images/ground.png')
 });
@@ -60,64 +74,112 @@ var WET_MATERIAL = new THREE.SpriteMaterial({
     map: THREE.ImageUtils.loadTexture('images/soil.png')
 });
 
-var TerrainStore = (function () {
-    function TerrainStore() {
-        this.seed = Math.random();
-        this.modifiedChunks = new Grid();
+var Chunk = (function (_super) {
+    __extends(Chunk, _super);
+    function Chunk(chunkX, chunkY) {
+        _super.call(this);
+        this.chunkX = chunkX;
+        this.chunkY = chunkY;
+        this.plants = [];
+        this.isModified = false;
     }
-    TerrainStore.prototype.onAdd = function (x, y, ground) {
-        var chunk = this.getModifiedChunk(x, y);
-        var intrachunkx = x % 64;
-        var intrachunky = y % 64;
-        chunk.set(intrachunkx, intrachunky, ground);
+    Chunk.blockToChunk = function (blockCoords) {
+        var chunkx = Math.floor(blockCoords[0] / CHUNK_SIZE);
+        var chunky = Math.floor(blockCoords[1] / CHUNK_SIZE);
+        return [chunkx, chunky];
     };
 
-    TerrainStore.prototype.onRemove = function (x, y) {
-        var chunk = this.getModifiedChunk(x, y);
-        var intrachunkx = x % 64;
-        var intrachunky = y % 64;
-        chunk.clear(intrachunkx, intrachunky);
-    };
-
-    TerrainStore.prototype.getChunk = function (x, y) {
-        var chunkx = Math.floor(x / 64);
-        var chunky = Math.floor(y / 64);
-        var chunk = this.modifiedChunks.get(chunkx, chunky);
-        if (!chunk) {
-            chunk = this.generateChunk(chunkx, chunky);
+    Chunk.prototype.getIntraChunkBlockCoords = function (blockX, blockY) {
+        var intrachunkx = blockX % CHUNK_SIZE;
+        var intrachunky = blockY % CHUNK_SIZE;
+        if (intrachunkx < 0) {
+            intrachunkx = intrachunkx + CHUNK_SIZE;
         }
-        return chunk;
-    };
-
-    TerrainStore.prototype.getModifiedChunk = function (x, y) {
-        var chunkx = Math.floor(x / 64);
-        var chunky = Math.floor(y / 64);
-        var chunk = this.modifiedChunks.get(chunkx, chunky);
-        if (!chunk) {
-            chunk = this.generateChunk(chunkx, chunky);
-            this.modifiedChunks.set(chunkx, chunky, chunk);
+        if (intrachunky < 0) {
+            intrachunky = intrachunky + CHUNK_SIZE;
         }
-        return chunk;
+        return [Math.abs(intrachunkx), Math.abs(intrachunky)];
     };
+    return Chunk;
+})(Grid);
 
-    TerrainStore.prototype.generateChunk = function (x, y) {
+var FlatEarth = (function () {
+    function FlatEarth() {
+    }
+    FlatEarth.prototype.generateChunk = function (chunkX, chunkY) {
+        var rng = new Math.seedrandom('loo' + chunkX + ';' + chunkY);
+
         // once we're doing terrain generation, we should do something with the
-        // seed and x and y to consistently generate the same terrain here
-        var chunk = new Grid();
-        if (y > 0) {
+        // seed and chunkX and chunkY to consistently generate the same terrain here
+        var chunk = new Chunk(chunkX, chunkY);
+        if (chunkY > 0) {
             return chunk;
         }
-        var baseX = x * 64;
-        var baseY = y * 64;
-        for (var intrachunkx = 0; intrachunkx < 64; intrachunkx++) {
-            for (var intrachunky = 0; intrachunky < 64; intrachunky++) {
+        var baseX = chunkX * CHUNK_SIZE;
+        var baseY = chunkY * CHUNK_SIZE;
+        for (var intrachunkx = 0; intrachunkx < CHUNK_SIZE; intrachunkx++) {
+            for (var intrachunky = 0; intrachunky < CHUNK_SIZE; intrachunky++) {
                 var absoluteX = baseX + intrachunkx;
                 var absoluteY = baseY + intrachunky;
                 if (absoluteY <= 0) {
                     chunk.set(intrachunkx, intrachunky, new Ground(absoluteX, absoluteY));
                 }
+
+                if (absoluteY == 0) {
+                    if (rng() < 0.1) {
+                        var plant = new Plant(absoluteX, 1);
+                        chunk.plants.push(plant);
+                    }
+                    if (rng() < 0.03) {
+                        var tree = new Tree(absoluteX, 1);
+                        chunk.plants.push(tree);
+                    }
+                }
             }
         }
+        return chunk;
+    };
+    return FlatEarth;
+})();
+
+var TerrainStore = (function () {
+    function TerrainStore(worldGenerator) {
+        this.worldGenerator = worldGenerator;
+        this.activeChunks = new Grid();
+        this.modifiedChunks = new Grid();
+    }
+    /**
+    * Get or generate a chunk of the world.
+    */
+    TerrainStore.prototype.getChunk = function (chunkX, chunkY) {
+        var chunk = this.modifiedChunks.get(chunkX, chunkY);
+        if (!chunk) {
+            chunk = this.worldGenerator.generateChunk(chunkX, chunkY);
+        }
+
+        return chunk;
+    };
+
+    TerrainStore.prototype.onRemoveBlock = function (blockX, blockY) {
+        var cc = Chunk.blockToChunk([blockX, blockY]);
+        var chunk = this.activeChunks.get(cc[0], cc[1]);
+        if (!chunk.isModified) {
+            chunk.isModified = true;
+            this.modifiedChunks.set(cc[0], cc[1], chunk);
+        }
+        var intbc = chunk.getIntraChunkBlockCoords(blockX, blockY);
+        chunk.clear(intbc[0], intbc[1]);
+    };
+
+    TerrainStore.prototype.getModifiedChunk = function (x, y) {
+        var chunkx = Math.floor(x / CHUNK_SIZE);
+        var chunky = Math.floor(y / CHUNK_SIZE);
+        var chunk = this.modifiedChunks.get(chunkx, chunky);
+        if (!chunk) {
+            chunk = this.worldGenerator.generateChunk(chunkx, chunky);
+            this.modifiedChunks.set(chunkx, chunky, chunk);
+        }
+        return chunk;
     };
     return TerrainStore;
 })();
@@ -177,6 +239,7 @@ var Ground = (function () {
 
         game.scene.remove(this.sprite);
         game.terrainGrid.clear(this.x, this.y);
+        game.terrainStore.onRemoveBlock(this.x, this.y);
     };
     return Ground;
 })();
@@ -320,6 +383,7 @@ var Tree = (function () {
 })();
 var DUDE_MATERIAL = LoadJaggyMaterial('images/dude.png');
 var FLASH_MATERIAL = LoadJaggyMaterial('images/flash.png');
+var NEGINFINITY = -(1 / 0);
 var PAN_DISTANCE = 300;
 
 var Player = (function () {
@@ -359,7 +423,9 @@ var Player = (function () {
         if (groundBeneath != newGroundBeneath) {
             // collide with old ground beneath
             // we went through groundBeneith, so reset our height to be its.
-            this.sprite.position.y = Math.max(groundBeneath.sprite.position.y, newGroundBeneath.sprite.position.y) + MAGIC_NUMBER;
+            var oldGroundY = groundBeneath ? groundBeneath.sprite.position.y : NEGINFINITY;
+            var newGroundY = newGroundBeneath ? newGroundBeneath.sprite.position.y : NEGINFINITY;
+            this.sprite.position.y = Math.max(oldGroundY, newGroundY) + MAGIC_NUMBER;
             this.speedY = 0;
         }
 
@@ -436,6 +502,7 @@ var BackgroundController = (function () {
     return BackgroundController;
 })();
 /// <reference path='lib/three.d.ts'/>
+/// <reference path='lib/seedrandom.d.ts'/>
 /// <reference path='consts.ts'/>
 /// <reference path='grid.ts'/>
 /// <reference path='ground.ts'/>
@@ -492,6 +559,9 @@ var Game = (function () {
         this.groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
         this.projector = new THREE.Projector();
         this.atmosphereController = new AtmosphereController(this.scene);
+        this.plants = [];
+        this.terrainStore = new TerrainStore(new FlatEarth());
+        this.hasRendered = false;
         this.camera.position.set(0, 0, 800);
         this.resize();
         document.body.appendChild(this.renderer.domElement);
@@ -568,6 +638,14 @@ var Game = (function () {
         ];
     };
 
+    // Returns the coords of the top left corner of the given block coords.
+    Game.prototype.blockToLocalCorner = function (x, y) {
+        return [
+            (x * BLOCK_SIZE) - (BLOCK_SIZE / 2),
+            (y * BLOCK_SIZE) - (BLOCK_SIZE / 2)
+        ];
+    };
+
     // Returns nearest block coordinates from local GL coordinates. Right and top
     // blocks win on edges.
     Game.prototype.localToBlock = function (x, y) {
@@ -580,6 +658,9 @@ var Game = (function () {
     // Returns local GL coordinates on the ground plane from normalized device
     // coordinates.
     Game.prototype.ndcToLocal = function (x, y) {
+        if (!this.hasRendered) {
+            throw new Error('Must have rendered before calling ndcToLocal');
+        }
         var ndc = new THREE.Vector3(x, y, null);
         var raycaster = this.projector.pickingRay(ndc, this.camera);
         return raycaster.ray.intersectPlane(this.groundPlane);
@@ -589,10 +670,15 @@ var Game = (function () {
         if (this.debug) {
             var lc = this.ndcToLocal((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1);
             var bc = this.localToBlock(lc.x, lc.y);
-            console.log('clicked block', bc);
             var outline = game.outlineBlock(bc[0], bc[1], 0x00ff00);
+            var cc = Chunk.blockToChunk(bc);
+            var chunk = this.terrainStore.getChunk(cc[0], cc[1]);
+            var chunkOutline = game.outlineChunk(chunk, 0x00ff00);
+
+            console.log('clicked block', bc, ' chunk ', cc, ' intrachunk ', chunk.getIntraChunkBlockCoords(bc[0], bc[1]));
             setTimeout(function () {
                 game.scene.remove(outline);
+                game.scene.remove(chunkOutline);
             }, 1000);
         }
     };
@@ -646,52 +732,73 @@ var Game = (function () {
 
     // Renders a single frame
     Game.prototype.render = function () {
+        this.hasRendered = true;
         this.renderer.render(this.scene, this.camera);
     };
 
     Game.prototype.generateVisibleWorld = function () {
         var topLeftLc = this.ndcToLocal(-1, 1);
         var bottomRightLc = this.ndcToLocal(1, -1);
-        var topLeftBc = this.localToBlock(topLeftLc.x, topLeftLc.y);
-        var bottomRightBc = this.localToBlock(bottomRightLc.x, bottomRightLc.y);
+        var topLeftBc = this.localToBlock(topLeftLc.x - BLOCK_SIZE, topLeftLc.y - BLOCK_SIZE);
+        var bottomRightBc = this.localToBlock(bottomRightLc.x + BLOCK_SIZE, bottomRightLc.y + BLOCK_SIZE);
         this.generateWorld(topLeftBc, bottomRightBc);
     };
 
     Game.prototype.generateWorld = function (topLeft, bottomRight) {
-        this.plants = [];
+        var _this = this;
         var numNew = 0;
-        for (var x = topLeft[0]; x <= bottomRight[0]; x++) {
-            for (var y = Math.min(topLeft[1], -1); y >= bottomRight[1]; y--) {
-                if (this.terrainGrid.has(x, y)) {
-                    continue;
-                }
-                numNew++;
-                var ground = new Ground(x, y);
-                this.terrainGrid.set(x, y, ground);
-                this.addEntity(ground);
-                if (y == -1) {
-                    if (Math.random() < 0.1) {
-                        var plant = new Plant(x, 0);
-                        this.addEntity(plant);
-                        this.plants.push(plant);
-
-                        // Add air around plants
-                        this.atmosphereController.addAir(x, 0);
-                        var points = Grid.neighbors(x, 0, 2);
-                        for (var i = 0; i < points.length; i++) {
-                            this.atmosphereController.addAir(points[i][0], points[i][1]);
-                        }
-                    }
-                    if (Math.random() < 0.03) {
-                        var tree = new Tree(x, 0);
-                        this.addEntity(tree);
-                    }
+        var topLeftChunkCoords = Chunk.blockToChunk(topLeft);
+        var bottomRightChunkCoords = Chunk.blockToChunk(bottomRight);
+        for (var x = topLeftChunkCoords[0]; x <= bottomRightChunkCoords[0]; x++) {
+            for (var y = topLeftChunkCoords[1]; y >= bottomRightChunkCoords[1]; y--) {
+                if (!this.terrainStore.activeChunks.has(x, y)) {
+                    this.addChunk(this.terrainStore.getChunk(x, y));
                 }
             }
         }
+
+        this.terrainStore.activeChunks.forEach(function (x, y, chunk) {
+            if (x < topLeftChunkCoords[0] || x > bottomRightChunkCoords[0] || y > topLeftChunkCoords[1] || y < bottomRightChunkCoords[1]) {
+                _this.removeChunk(chunk);
+            }
+        });
+
         if (this.debug && numNew > 0) {
             console.log('generated', numNew, 'blocks', 'from', topLeft, 'to', bottomRight);
         }
+    };
+
+    Game.prototype.addChunk = function (chunk) {
+        var _this = this;
+        this.terrainStore.activeChunks.set(chunk.chunkX, chunk.chunkY, chunk);
+        chunk.forEach(function (x, y, ground) {
+            _this.terrainGrid.set(ground.x, ground.y, ground);
+            _this.addEntity(ground);
+        });
+        chunk.plants.forEach(function (plant) {
+            _this.addEntity(plant);
+
+            // Add air around plants
+            _this.atmosphereController.addAir(plant.x, 0);
+            var points = Grid.neighbors(plant.x, 0, 2);
+            for (var i = 0; i < points.length; i++) {
+                _this.atmosphereController.addAir(points[i][0], points[i][1]);
+            }
+        });
+    };
+
+    Game.prototype.removeChunk = function (chunk) {
+        var _this = this;
+        this.terrainStore.activeChunks.clear(chunk.chunkX, chunk.chunkY);
+        chunk.forEach(function (x, y, ground) {
+            _this.terrainGrid.clear(ground.x, ground.y);
+            _this.removeEntity(ground);
+        });
+        chunk.plants.forEach(function (plant) {
+            _this.removeEntity(plant);
+            // TODO: remove atmosphere from around plants,
+            //       or just in the chunk in general?
+        });
     };
 
     Game.prototype.onGround = function (entity) {
@@ -705,15 +812,15 @@ var Game = (function () {
     // Single tick of game time (1 frame)
     Game.prototype.tick = function () {
         this.handleInput();
-        if (tickCount == 1) {
+        if (this.hasRendered) {
             this.generateVisibleWorld();
         }
         for (var id in this.entities) {
             this.entities[id].tick();
         }
-        this.terrainGrid.forEach(function (x, y, ground) {
-            ground.tick();
-        });
+        if (tickCount % 600 == 10) {
+            console.log(this.scene.children.length, " objects in scene");
+        }
         tickCount++;
     };
 
@@ -735,10 +842,11 @@ var Game = (function () {
 
             // Origin block.
             this.debugSprites.push(this.outlineBlock(0, 0, 0x0000ff));
-
             // Origin lines.
-            this.debugSprites.push(this.drawLine([0, 300], [0, -300], 0xff0000));
-            this.debugSprites.push(this.drawLine([300, 0], [-300, 0], 0xff0000));
+            // this.debugSprites.push(
+            //   this.drawLine([0, 300], [0, -300], 0xff0000));
+            // this.debugSprites.push(
+            //   this.drawLine([300, 0], [-300, 0], 0xff0000));
         } else {
             var self = this;
             this.debugSprites.forEach(function (sprite) {
@@ -748,6 +856,7 @@ var Game = (function () {
     };
 
     Game.prototype.drawLine = function (from, to, color) {
+        if (typeof color === "undefined") { color = null; }
         var material = new THREE.LineBasicMaterial({ color: color || null });
         var geometry = new THREE.Geometry();
         geometry.vertices.push(new THREE.Vector3(from[0], from[1], 1));
@@ -758,6 +867,7 @@ var Game = (function () {
     };
 
     Game.prototype.drawRect = function (cornerA, cornerB, color) {
+        if (typeof color === "undefined") { color = null; }
         var material = new THREE.LineBasicMaterial({ color: color || null });
         var geometry = new THREE.Geometry();
         geometry.vertices.push(new THREE.Vector3(cornerA[0], cornerA[1], 1));
@@ -771,8 +881,18 @@ var Game = (function () {
     };
 
     Game.prototype.outlineBlock = function (x, y, color) {
-        var lc = this.blockToLocal(x, y);
-        return this.drawRect([lc[0] - BLOCK_SIZE / 2, lc[1] - BLOCK_SIZE / 2], [lc[0] + BLOCK_SIZE / 2, lc[1] + BLOCK_SIZE / 2], color);
+        return this.drawRect(this.blockToLocalCorner(x, y), this.blockToLocalCorner(x + 1, y + 1), color);
+    };
+
+    Game.prototype.outlineChunk = function (chunk, color) {
+        var topLeftBlockX = chunk.chunkX * CHUNK_SIZE;
+        var topLeftBlockY = chunk.chunkY * CHUNK_SIZE;
+        var bottomRightBlockX = (chunk.chunkX + 1) * CHUNK_SIZE;
+        var bottomRightBlockY = (chunk.chunkY + 1) * CHUNK_SIZE;
+        var tlLc = this.blockToLocalCorner(topLeftBlockX, topLeftBlockY);
+        var brLc = this.blockToLocalCorner(bottomRightBlockX, bottomRightBlockY);
+        console.log(tlLc, brLc);
+        return this.drawRect(tlLc, brLc, color);
     };
     return Game;
 })();
