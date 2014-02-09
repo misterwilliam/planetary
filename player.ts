@@ -20,11 +20,16 @@ class Player implements Entity {
 
   tick() {
     // Move camera with player.
-    var cameraOffset = this.sprite.position.x - this.game.camera.position.x;
-    if (cameraOffset > PAN_DISTANCE) {
-      this.game.panCamera(Math.abs(this.speedX) || 0.5);
-    } else if (cameraOffset < -PAN_DISTANCE) {
-      this.game.panCamera(-Math.abs(this.speedX) || -0.5);
+    if (game.hasRendered) {
+      var cameraOffset = this.sprite.position.clone().sub(this.game.camera.position);
+      var cameraMotion = new THREE.Vector2(0,0);
+      if (Math.abs(cameraOffset.x) > game.cameraDeadzone.x) {
+        cameraMotion.x = cameraOffset.x * 0.1;
+      }
+      if (Math.abs(cameraOffset.y) > game.cameraDeadzone.y) {
+        cameraMotion.y = cameraOffset.y * 0.1;
+      }
+      this.game.panCamera(cameraMotion.x, cameraMotion.y);
     }
 
     // Gravity on player.
@@ -89,7 +94,7 @@ class Player implements Entity {
 
   dig() {
     var now = getNow();
-    if (now - 650 < this.lastDig) {
+    if (now - 10 < this.lastDig) {
       return;
     }
     this.lastDig = now;
