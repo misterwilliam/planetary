@@ -90,7 +90,7 @@ class Player implements Entity {
 
   dig() {
     var now = getNow();
-    if (now - 650 < this.lastDig) {
+    if (now - 10 < this.lastDig) {
       return;
     }
     this.lastDig = now;
