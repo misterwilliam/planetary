@@ -347,11 +347,13 @@ class Game {
     for (var id in this.entities) {
       this.entities[id].tick();
     }
-    this.removeSprites.forEach((remove) => {
+    for (var i = 0; i < this.removeSprites.length; i++) {
+      var remove = this.removeSprites[i];
       if (remove.ticks-- == 0) {
         this.scene.remove(remove.sprite);
+        this.removeSprites.splice(i--, 1);
       }
-    });
+    }
     if (tickCount % 600 == 10) {
       console.log(this.scene.children.length, " objects in scene");
     }
