@@ -5,6 +5,7 @@
 /// <reference path='ground.ts'/>
 /// <reference path='air-generator.ts'/>
 /// <reference path='atmosphere.ts'/>
+/// <reference path='boar.ts'/>
 /// <reference path='plant.ts'/>
 /// <reference path='tree.ts'/>
 /// <reference path='player.ts'/>
@@ -226,6 +227,9 @@ class Game {
     var airGenerator = new AirGenerator(5, 7);
     this.addEntity(airGenerator);
 
+    var boar = new Boar(-5, 2);
+    this.addEntity(boar);
+
     window.addEventListener('keydown', this.handleKey.bind(this));
     window.addEventListener('keyup', this.handleKey.bind(this));
     window.addEventListener('blur', this.clearInput.bind(this));
@@ -323,6 +327,15 @@ class Game {
     });
   }
 
+  boundingBox(entity:Entity):number[][] {
+    var width = entity.sprite.scale.x;
+    var height = entity.sprite.scale.y;
+    var xCenter = entity.sprite.position.x;
+    var yCenter = entity.sprite.position.y;
+    var topLeft = [xCenter - width / 2, yCenter + height / 2];
+    var bottomRight = [xCenter + width / 2, yCenter - height / 2];
+    return [topLeft, bottomRight];
+  }
 
   onGround(entity:Entity) : boolean {
     var ground = this.getGroundBeneathEntity(entity);
@@ -341,11 +354,13 @@ class Game {
     for (var id in this.entities) {
       this.entities[id].tick();
     }
-    this.removeSprites.forEach((remove) => {
+    for (var i = 0; i < this.removeSprites.length; i++) {
+      var remove = this.removeSprites[i];
       if (remove.ticks-- == 0) {
         this.scene.remove(remove.sprite);
+        this.removeSprites.splice(i--, 1);
       }
-    });
+    }
     if (tickCount % 600 == 10) {
       console.log(this.scene.children.length, " objects in scene");
     }
