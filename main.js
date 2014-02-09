@@ -446,10 +446,7 @@ var Player = (function () {
         // Highlight the trail of blocks we enter.
         if (game.debug) {
             var bc = game.localToBlock(this.sprite.position.x, this.sprite.position.y);
-            var outline = game.outlineBlock(bc[0], bc[1]);
-            setTimeout(function () {
-                game.scene.remove(outline);
-            }, 500);
+            game.addSpriteForTicks(game.outlineBlock(bc[0], bc[1]), 30);
         }
     };
 
@@ -473,10 +470,7 @@ var Player = (function () {
 
         var flashSprite = this.flashSprite;
         flashSprite.position.set(this.sprite.position.x, this.sprite.position.y - 30, 1);
-        game.scene.add(flashSprite);
-        setTimeout(function () {
-            game.scene.remove(flashSprite);
-        }, 100);
+        game.addSpriteForTicks(flashSprite, 10);
 
         var ground = this.game.getGroundBeneathEntity(this);
         if (ground) {
@@ -562,6 +556,7 @@ var Game = (function () {
         this.plants = [];
         this.terrainStore = new TerrainStore(new FlatEarth());
         this.hasRendered = false;
+        this.removeSprites = [];
         this.camera.position.set(0, 0, 800);
         this.resize();
         document.body.appendChild(this.renderer.domElement);
@@ -629,6 +624,12 @@ var Game = (function () {
         delete this.entities[entity.id];
     };
 
+    Game.prototype.addSpriteForTicks = function (sprite, ticks) {
+        if (typeof ticks === "undefined") { ticks = 1; }
+        this.scene.add(sprite);
+        this.removeSprites.push({ sprite: sprite, ticks: ticks });
+    };
+
     // Returns local GL coordinates of the center of a block from block
     // coordinates.
     Game.prototype.blockToLocal = function (x, y) {
@@ -670,16 +671,11 @@ var Game = (function () {
         if (this.debug) {
             var lc = this.ndcToLocal((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1);
             var bc = this.localToBlock(lc.x, lc.y);
-            var outline = game.outlineBlock(bc[0], bc[1], 0x00ff00);
+            this.addSpriteForTicks(game.outlineBlock(bc[0], bc[1], 0x00ff00), 60);
             var cc = Chunk.blockToChunk(bc);
             var chunk = this.terrainStore.getChunk(cc[0], cc[1]);
-            var chunkOutline = game.outlineChunk(chunk, 0x00ff00);
-
+            this.addSpriteForTicks(game.outlineChunk(chunk, 0x00ff00), 60);
             console.log('clicked block', bc, ' chunk ', cc, ' intrachunk ', chunk.getIntraChunkBlockCoords(bc[0], bc[1]));
-            setTimeout(function () {
-                game.scene.remove(outline);
-                game.scene.remove(chunkOutline);
-            }, 1000);
         }
     };
 
@@ -811,6 +807,7 @@ var Game = (function () {
 
     // Single tick of game time (1 frame)
     Game.prototype.tick = function () {
+        var _this = this;
         this.handleInput();
         if (this.hasRendered) {
             this.generateVisibleWorld();
@@ -818,6 +815,11 @@ var Game = (function () {
         for (var id in this.entities) {
             this.entities[id].tick();
         }
+        this.removeSprites.forEach(function (remove) {
+            if (remove.ticks-- == 0) {
+                _this.scene.remove(remove.sprite);
+            }
+        });
         if (tickCount % 600 == 10) {
             console.log(this.scene.children.length, " objects in scene");
         }
