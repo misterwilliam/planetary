@@ -13,6 +13,7 @@ interface WorldGenerator {
 
 class Chunk extends Grid<Ground> {
   plants : BlockAlignedEntity[] = [];
+  isModified = false;
   constructor(public chunkX:number, public chunkY:number) {
     super();
   }
@@ -21,6 +22,18 @@ class Chunk extends Grid<Ground> {
     var chunkx = Math.floor(blockCoords[0] / CHUNK_SIZE);
     var chunky = Math.floor(blockCoords[1] / CHUNK_SIZE);
     return [chunkx, chunky];
+  }
+
+  getIntraChunkBlockCoords(blockX:number, blockY:number):number[] {
+    var intrachunkx = blockX % CHUNK_SIZE;
+    var intrachunky = blockY % CHUNK_SIZE;
+    if (intrachunkx < 0) {
+      intrachunkx = intrachunkx + CHUNK_SIZE;
+    }
+    if (intrachunky < 0) {
+      intrachunky = intrachunky + CHUNK_SIZE;
+    }
+    return [Math.abs(intrachunkx), Math.abs(intrachunky)];
   }
 }
 
@@ -61,22 +74,9 @@ class FlatEarth implements WorldGenerator {
 }
 
 class TerrainStore {
+  activeChunks = new Grid<Chunk>();
   modifiedChunks = new Grid<Chunk>();
   constructor(public worldGenerator:WorldGenerator) {}
-
-  onAdd(x:number, y:number, ground:Ground) {
-    var chunk = this.getModifiedChunk(x,y);
-    var intrachunkx = x % CHUNK_SIZE;
-    var intrachunky = y % CHUNK_SIZE;
-    chunk.set(intrachunkx, intrachunky, ground);
-  }
-
-  onRemove(x:number, y:number) {
-    var chunk = this.getModifiedChunk(x,y);
-    var intrachunkx = x % CHUNK_SIZE;
-    var intrachunky = y % CHUNK_SIZE;
-    chunk.clear(intrachunkx, intrachunky);
-  }
 
   /**
     * Get or generate a chunk of the world.
@@ -88,6 +88,17 @@ class TerrainStore {
     }
 
     return chunk;
+  }
+
+  onRemoveBlock(blockX:number, blockY:number) {
+    var cc = Chunk.blockToChunk([blockX, blockY]);
+    var chunk = this.activeChunks.get(cc[0], cc[1]);
+    if (!chunk.isModified) {
+      chunk.isModified = true;
+      this.modifiedChunks.set(cc[0], cc[1], chunk);
+    }
+    var intbc = chunk.getIntraChunkBlockCoords(blockX, blockY);
+    chunk.clear(intbc[0], intbc[1]);
   }
 
   private getModifiedChunk(x:number, y:number) {
@@ -157,6 +168,7 @@ class Ground implements Entity{
 
     game.scene.remove(this.sprite);
     game.terrainGrid.clear(this.x, this.y);
+    game.terrainStore.onRemoveBlock(this.x, this.y);
   }
 
 }

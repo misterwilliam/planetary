@@ -69,7 +69,6 @@ class Game {
   plants : Plant[] = [];
   debugSprites : THREE.Object3D[];
   terrainStore = new TerrainStore(new FlatEarth());
-  activeChunks = new Grid<Chunk>();
   hasRendered = false;
 
   constructor() {
@@ -186,11 +185,12 @@ class Game {
         (event.clientX / window.innerWidth) * 2 - 1,
         -(event.clientY / window.innerHeight) * 2 + 1);
       var bc = this.localToBlock(lc.x, lc.y);
-      console.log('clicked block', bc);
       var outline = game.outlineBlock(bc[0], bc[1], 0x00ff00);
       var cc = Chunk.blockToChunk(bc);
-      var chunkOutline = game.outlineChunk(
-          this.terrainStore.getChunk(cc[0], cc[1]), 0x00ff00);
+      var chunk = this.terrainStore.getChunk(cc[0], cc[1]);
+      var chunkOutline = game.outlineChunk(chunk, 0x00ff00);
+
+      console.log('clicked block', bc, ' chunk ', cc, ' intrachunk ', chunk.getIntraChunkBlockCoords(bc[0], bc[1]));
       setTimeout(() => {
         game.scene.remove(outline);
         game.scene.remove(chunkOutline);
@@ -268,13 +268,13 @@ class Game {
     var bottomRightChunkCoords = Chunk.blockToChunk(bottomRight);
     for (var x = topLeftChunkCoords[0]; x <= bottomRightChunkCoords[0]; x++) {
       for (var y = topLeftChunkCoords[1]; y >= bottomRightChunkCoords[1]; y--) {
-        if (!this.activeChunks.has(x, y)) {
+        if (!this.terrainStore.activeChunks.has(x, y)) {
           this.addChunk(this.terrainStore.getChunk(x, y));
         }
       }
     }
 
-    this.activeChunks.forEach((x, y, chunk) => {
+    this.terrainStore.activeChunks.forEach((x, y, chunk) => {
       if (x < topLeftChunkCoords[0] || x > bottomRightChunkCoords[0] ||
           y > topLeftChunkCoords[1] || y < bottomRightChunkCoords[1]) {
         this.removeChunk(chunk);
@@ -288,7 +288,7 @@ class Game {
   }
 
   addChunk(chunk:Chunk) {
-    this.activeChunks.set(chunk.chunkX, chunk.chunkY, chunk);
+    this.terrainStore.activeChunks.set(chunk.chunkX, chunk.chunkY, chunk);
     chunk.forEach((x, y, ground) => {
       this.terrainGrid.set(ground.x, ground.y, ground);
       this.addEntity(ground);
@@ -306,7 +306,7 @@ class Game {
   }
 
   removeChunk(chunk:Chunk) {
-    this.activeChunks.clear(chunk.chunkX, chunk.chunkY);
+    this.terrainStore.activeChunks.clear(chunk.chunkX, chunk.chunkY);
     chunk.forEach((x, y, ground) => {
       this.terrainGrid.clear(ground.x, ground.y);
       this.removeEntity(ground);
