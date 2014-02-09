@@ -18,6 +18,11 @@ class Grid<T> {
       f(parseInt(s[0], 10), parseInt(s[1], 10), this._grid[key]);
     }
   }
+  getSize() {
+    var i = 0;
+    this.forEach(() => {i++});
+    return i;
+  }
 
   // Returns list of neighboring grid coordinates. If range is passed then
   // returns list of neighbors withing Manhattan distance range.
@@ -43,4 +48,3 @@ class Grid<T> {
     return Grid.neighbors(block[0], block[1], range);
   }
 }
-

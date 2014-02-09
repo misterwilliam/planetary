@@ -7,63 +7,109 @@ var WET_MATERIAL = new THREE.SpriteMaterial({
   map: THREE.ImageUtils.loadTexture('images/soil.png')
 });
 
-class TerrainStore {
-  seed = Math.random();
-  modifiedChunks = new Grid<Grid<Ground>>();
+interface WorldGenerator {
+  generateChunk(chunkX:number, chunkY:number):Chunk;
+}
 
-  onAdd(x:number, y:number, ground:Ground) {
-    var chunk = this.getModifiedChunk(x,y);
-    var intrachunkx = x % 64;
-    var intrachunky = y % 64;
-    chunk.set(intrachunkx, intrachunky, ground);
+class Chunk extends Grid<Ground> {
+  plants : BlockAlignedEntity[] = [];
+  isModified = false;
+  constructor(public chunkX:number, public chunkY:number) {
+    super();
   }
 
-  onRemove(x:number, y:number) {
-    var chunk = this.getModifiedChunk(x,y);
-    var intrachunkx = x % 64;
-    var intrachunky = y % 64;
-    chunk.clear(intrachunkx, intrachunky);
+  static blockToChunk(blockCoords: number[]):number[] {
+    var chunkx = Math.floor(blockCoords[0] / CHUNK_SIZE);
+    var chunky = Math.floor(blockCoords[1] / CHUNK_SIZE);
+    return [chunkx, chunky];
   }
 
-  getChunk(x:number, y:number) {
-    var chunkx = Math.floor(x / 64);
-    var chunky = Math.floor(y / 64);
-    var chunk = this.modifiedChunks.get(chunkx, chunky);
-    if (!chunk) {
-      chunk = this.generateChunk(chunkx, chunky);
+  getIntraChunkBlockCoords(blockX:number, blockY:number):number[] {
+    var intrachunkx = blockX % CHUNK_SIZE;
+    var intrachunky = blockY % CHUNK_SIZE;
+    if (intrachunkx < 0) {
+      intrachunkx = intrachunkx + CHUNK_SIZE;
     }
-    return chunk;
-  }
-
-  private getModifiedChunk(x:number, y:number) {
-    var chunkx = Math.floor(x / 64);
-    var chunky = Math.floor(y / 64);
-    var chunk = this.modifiedChunks.get(chunkx, chunky);
-    if (!chunk) {
-      chunk = this.generateChunk(chunkx, chunky);
-      this.modifiedChunks.set(chunkx, chunky, chunk)
+    if (intrachunky < 0) {
+      intrachunky = intrachunky + CHUNK_SIZE;
     }
-    return chunk;
+    return [Math.abs(intrachunkx), Math.abs(intrachunky)];
   }
+}
 
-  private generateChunk(x:number, y:number) {
+class FlatEarth implements WorldGenerator {
+
+  generateChunk(chunkX:number, chunkY:number) {
+    var rng = new Math.seedrandom('loo' + chunkX + ';' + chunkY);
     // once we're doing terrain generation, we should do something with the
-    // seed and x and y to consistently generate the same terrain here
-    var chunk = new Grid<Ground>();
-    if (y > 0) {
+    // seed and chunkX and chunkY to consistently generate the same terrain here
+    var chunk = new Chunk(chunkX, chunkY);
+    if (chunkY > 0) {
       return chunk;  // pure empty air
     }
-    var baseX = x * 64;
-    var baseY = y * 64;
-    for (var intrachunkx = 0; intrachunkx < 64; intrachunkx++) {
-      for (var intrachunky = 0; intrachunky < 64; intrachunky++) {
+    var baseX = chunkX * CHUNK_SIZE;
+    var baseY = chunkY * CHUNK_SIZE;
+    for (var intrachunkx = 0; intrachunkx < CHUNK_SIZE; intrachunkx++) {
+      for (var intrachunky = 0; intrachunky < CHUNK_SIZE; intrachunky++) {
         var absoluteX = baseX + intrachunkx;
         var absoluteY = baseY + intrachunky;
         if (absoluteY <= 0) { // below ground, there's ground
           chunk.set(intrachunkx, intrachunky, new Ground(absoluteX, absoluteY));
         }
+
+        if (absoluteY == 0) {
+          if(rng() < 0.1) {
+            var plant = new Plant(absoluteX, 1);
+            chunk.plants.push(plant);
+          }
+          if (rng() < 0.03) {
+            var tree = new Tree(absoluteX, 1);
+            chunk.plants.push(tree);
+          }
+        }
       }
     }
+    return chunk;
+  }
+}
+
+class TerrainStore {
+  activeChunks = new Grid<Chunk>();
+  modifiedChunks = new Grid<Chunk>();
+  constructor(public worldGenerator:WorldGenerator) {}
+
+  /**
+    * Get or generate a chunk of the world.
+    */
+  getChunk(chunkX:number, chunkY:number) {
+    var chunk = this.modifiedChunks.get(chunkX, chunkY);
+    if (!chunk) {
+      chunk = this.worldGenerator.generateChunk(chunkX, chunkY);
+    }
+
+    return chunk;
+  }
+
+  onRemoveBlock(blockX:number, blockY:number) {
+    var cc = Chunk.blockToChunk([blockX, blockY]);
+    var chunk = this.activeChunks.get(cc[0], cc[1]);
+    if (!chunk.isModified) {
+      chunk.isModified = true;
+      this.modifiedChunks.set(cc[0], cc[1], chunk);
+    }
+    var intbc = chunk.getIntraChunkBlockCoords(blockX, blockY);
+    chunk.clear(intbc[0], intbc[1]);
+  }
+
+  private getModifiedChunk(x:number, y:number) {
+    var chunkx = Math.floor(x / CHUNK_SIZE);
+    var chunky = Math.floor(y / CHUNK_SIZE);
+    var chunk = this.modifiedChunks.get(chunkx, chunky);
+    if (!chunk) {
+      chunk = this.worldGenerator.generateChunk(chunkx, chunky);
+      this.modifiedChunks.set(chunkx, chunky, chunk)
+    }
+    return chunk;
   }
 
 }
@@ -122,6 +168,7 @@ class Ground implements Entity{
 
     game.scene.remove(this.sprite);
     game.terrainGrid.clear(this.x, this.y);
+    game.terrainStore.onRemoveBlock(this.x, this.y);
   }
 
 }

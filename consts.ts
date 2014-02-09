@@ -4,4 +4,5 @@ var JUMP_HEIGHT = 10;
 var MAX_DEPTH = -6;
 var MAX_CATCHUP = 10;
 var BLOCK_SIZE = 32;
+var CHUNK_SIZE = 16;
 var MAGIC_NUMBER = 56;
