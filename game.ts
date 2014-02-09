@@ -320,6 +320,15 @@ class Game {
     });
   }
 
+  boundingBox(entity:Entity):number[][] {
+    var width = entity.sprite.scale.x;
+    var height = entity.sprite.scale.y;
+    var xCenter = entity.sprite.position.x;
+    var yCenter = entity.sprite.position.y;
+    var topLeft = [xCenter - width / 2, yCenter + height / 2];
+    var bottomRight = [xCenter + width / 2, yCenter - height / 2];
+    return [topLeft, bottomRight];
+  }
 
   onGround(entity:Entity) : boolean {
     var ground = this.getGroundBeneathEntity(entity);
