@@ -1,7 +1,6 @@
 var PLAYER_MAX_SPEED = 8;
 var PLAYER_ACCELERATION = 0.001;
 var JUMP_HEIGHT = 10;
-var MAX_DEPTH = -6;
 var MAX_CATCHUP = 10;
 var BLOCK_SIZE = 32;
 var CHUNK_SIZE = 16;
@@ -109,8 +108,6 @@ var FlatEarth = (function () {
     FlatEarth.prototype.generateChunk = function (chunkX, chunkY) {
         var rng = new Math.seedrandom('loo' + chunkX + ';' + chunkY);
 
-        // once we're doing terrain generation, we should do something with the
-        // seed and chunkX and chunkY to consistently generate the same terrain here
         var chunk = new Chunk(chunkX, chunkY);
         if (chunkY > 0) {
             return chunk;
@@ -447,6 +444,9 @@ var Player = (function () {
         if (game.debug) {
             var bc = game.localToBlock(this.sprite.position.x, this.sprite.position.y);
             game.addSpriteForTicks(game.outlineBlock(bc[0], bc[1]), 30);
+
+            var boundingBox = game.boundingBox(this);
+            game.addSpriteForTicks(game.drawRect(boundingBox[0], boundingBox[1], 0x00ff00), 1);
         }
     };
 
@@ -683,7 +683,7 @@ var Game = (function () {
         var lc = this.localToBlock(entity.sprite.position.x, entity.sprite.position.y);
         var height = lc[1] - 1;
         while (!this.terrainGrid.has(lc[0], height)) {
-            if (height <= MAX_DEPTH) {
+            if (height <= lc[1] - 6) {
                 return null;
             }
             height -= 1;
@@ -795,6 +795,16 @@ var Game = (function () {
             // TODO: remove atmosphere from around plants,
             //       or just in the chunk in general?
         });
+    };
+
+    Game.prototype.boundingBox = function (entity) {
+        var width = entity.sprite.scale.x;
+        var height = entity.sprite.scale.y;
+        var xCenter = entity.sprite.position.x;
+        var yCenter = entity.sprite.position.y;
+        var topLeft = [xCenter - width / 2, yCenter + height / 2];
+        var bottomRight = [xCenter + width / 2, yCenter - height / 2];
+        return [topLeft, bottomRight];
     };
 
     Game.prototype.onGround = function (entity) {
