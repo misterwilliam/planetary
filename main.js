@@ -3,6 +3,7 @@ var PLAYER_ACCELERATION = 0.001;
 var JUMP_HEIGHT = 10;
 var MAX_CATCHUP = 10;
 var BLOCK_SIZE = 32;
+var HALF_BLOCK = BLOCK_SIZE / 2;
 var CHUNK_SIZE = 16;
 var MAGIC_NUMBER = 56;
 var Grid = (function () {
@@ -396,8 +397,17 @@ var Tree = (function () {
 })();
 var DUDE_MATERIAL = LoadJaggyMaterial('images/dude.png');
 var FLASH_MATERIAL = LoadJaggyMaterial('images/flash.png');
-var NEGINFINITY = -(1 / 0);
-var PAN_DISTANCE = 300;
+var DUDE_WIDTH = 4 * 13;
+var DUDE_HEIGHT = 4 * 21;
+
+var WALK_ACCELERATION = 3;
+var JUMP_INITIAL_SPEED = 5;
+var JUMP_BOOST = 1.5;
+var JUMP_BOOST_TICKS = 7;
+var MAX_SPEED = HALF_BLOCK;
+var GRAVITY = 0.8;
+var FRICTION = 0.8;
+var DRAG = 0.98;
 
 var Player = (function () {
     function Player(game) {
@@ -405,18 +415,130 @@ var Player = (function () {
         this.speedX = 0;
         this.speedY = 0;
         this.sprite = new THREE.Sprite(DUDE_MATERIAL);
-        this.direction = -1;
         this.lastDig = -10000;
         this.flashSprite = new THREE.Sprite(FLASH_MATERIAL);
         this.id = -1;
-        this.teleport(0, 20);
-        this.sprite.scale.set(4 * 13, 4 * 21, 1.0); // imageWidth, imageHeight
-        this.flashSprite.scale.set(4 * 13, 4 * 21, 1.0); // imageWidth, imageHeight
+        this.onGround = true;
+        this.jumpTicks = 0;
+        this.sprite.scale.set(DUDE_WIDTH, DUDE_HEIGHT, 1.0);
+        this.flashSprite.scale.set(DUDE_WIDTH, DUDE_HEIGHT, 1.0);
+        this.teleport(0, 10);
     }
     Player.prototype.tick = function () {
-        // Move camera with player.
+        var _this = this;
+        if (game.input.dig) {
+            this.dig();
+        }
+
+        if (game.input.right) {
+            this.speedX += WALK_ACCELERATION;
+            this.sprite.scale.x = -DUDE_WIDTH;
+        } else if (game.input.left) {
+            this.speedX -= WALK_ACCELERATION;
+            this.sprite.scale.x = DUDE_WIDTH;
+        }
+
+        if (this.onGround) {
+            this.speedX *= FRICTION;
+        } else {
+            this.speedY -= GRAVITY;
+            this.speedX *= DRAG;
+        }
+
+        if (game.input.jump) {
+            if (this.onGround) {
+                this.speedY = JUMP_INITIAL_SPEED;
+                this.jumpTicks = JUMP_BOOST_TICKS;
+            } else if (this.jumpTicks-- > 0) {
+                this.speedY *= JUMP_BOOST;
+            }
+        }
+
+        if (Math.abs(this.speedX) < 0.5) {
+            this.speedX = 0;
+        } else if (Math.abs(this.speedX) > MAX_SPEED) {
+            this.speedX = this.speedX > 0 ? MAX_SPEED : -MAX_SPEED;
+        }
+        if (Math.abs(this.speedY) > MAX_SPEED) {
+            this.speedY = this.speedY > 0 ? MAX_SPEED : -MAX_SPEED;
+        }
+
+        var pos = this.sprite.position;
+        pos.x += this.speedX;
+        pos.y += this.speedY;
+
+        this.onGround = false;
+        var bounding = game.boundingBox(this.sprite);
+        var collisions = this.game.blockCollisions(bounding[0], bounding[1]);
+        collisions.forEach(function (bc) {
+            if (game.debug) {
+                game.addSpriteForTicks(game.outlineBlock(bc[0], bc[1], 0xffff00));
+            }
+            var lc = game.blockToLocal(bc[0], bc[1]);
+
+            // To know how to react to this collision, we need to figure out which of
+            // its 4 sides we would have hit first, given our previous position.
+            //
+            // We can eliminate 1 side from each axis using our direction. E.g. we
+            // couldn't have hit the bottom if we're moving down, or the left if
+            // we're moving left.
+            //
+            // Then we decide which of the 2 remaining sides we hit first by comparing
+            // block penetration time on each axis.
+            var timeX = Infinity;
+            if (_this.speedX > 0) {
+                timeX = (bounding[1][0] - (lc[0] - HALF_BLOCK)) / _this.speedX;
+            } else if (_this.speedX < 0) {
+                timeX = ((lc[0] + HALF_BLOCK) - bounding[0][0]) / -_this.speedX;
+            }
+
+            var timeY = Infinity;
+            if (_this.speedY > 0) {
+                timeY = (bounding[0][1] - (lc[1] - HALF_BLOCK)) / _this.speedY;
+            } else if (_this.speedY < 0) {
+                timeY = ((lc[1] + HALF_BLOCK) - bounding[1][1]) / -_this.speedY;
+            }
+
+            if (timeX < timeY) {
+                if (_this.speedX > 0) {
+                    // Ignore collision with a side that has an adjacent block, since its
+                    // an "inside" edge.
+                    if (!game.terrainGrid.has(bc[0] - 1, bc[1])) {
+                        pos.x = Math.min(pos.x, (lc[0] - HALF_BLOCK) - DUDE_WIDTH / 2);
+                        if (game.debug) {
+                            game.addSpriteForTicks(game.drawLine([lc[0] - HALF_BLOCK, lc[1] + HALF_BLOCK], [lc[0] - HALF_BLOCK, lc[1] - HALF_BLOCK], 0xff0000), 3);
+                        }
+                    }
+                } else {
+                    if (!game.terrainGrid.has(bc[0] + 1, bc[1])) {
+                        pos.x = Math.max(pos.x, (lc[0] + HALF_BLOCK) + DUDE_WIDTH / 2);
+                        if (game.debug) {
+                            game.addSpriteForTicks(game.drawLine([lc[0] + HALF_BLOCK, lc[1] + HALF_BLOCK], [lc[0] + HALF_BLOCK, lc[1] - HALF_BLOCK], 0xff0000), 3);
+                        }
+                    }
+                }
+            } else {
+                if (_this.speedY > 0) {
+                    if (!game.terrainGrid.has(bc[0], bc[1] - 1)) {
+                        pos.y = Math.min(pos.y, (lc[1] - HALF_BLOCK) + DUDE_HEIGHT / 2);
+                        if (game.debug) {
+                            game.addSpriteForTicks(game.drawLine([lc[0] + HALF_BLOCK, lc[1] - HALF_BLOCK], [lc[0] - HALF_BLOCK, lc[1] - HALF_BLOCK], 0xff0000), 3);
+                        }
+                    }
+                } else {
+                    if (!game.terrainGrid.has(bc[0], bc[1] + 1)) {
+                        pos.y = Math.max(pos.y, (lc[1] + HALF_BLOCK) + DUDE_HEIGHT / 2);
+                        _this.onGround = true;
+                        if (game.debug) {
+                            game.addSpriteForTicks(game.drawLine([lc[0] + HALF_BLOCK, lc[1] + HALF_BLOCK], [lc[0] - HALF_BLOCK, lc[1] + HALF_BLOCK], 0xff0000), 3);
+                        }
+                    }
+                }
+            }
+        });
+
         if (game.hasRendered) {
-            var cameraOffset = this.sprite.position.clone().sub(this.game.camera.position);
+            var cameraOffset = this.sprite.position.clone().sub(game.camera.position);
             var cameraMotion = new THREE.Vector2(0, 0);
             if (Math.abs(cameraOffset.x) > game.cameraDeadzone.x) {
                 cameraMotion.x = cameraOffset.x * 0.1;
@@ -424,62 +546,13 @@ var Player = (function () {
             if (Math.abs(cameraOffset.y) > game.cameraDeadzone.y) {
                 cameraMotion.y = cameraOffset.y * 0.1;
             }
-            this.game.panCamera(cameraMotion.x, cameraMotion.y);
-        }
-
-        // Gravity on player.
-        if (!this.game.onGround(this)) {
-            this.speedY -= 0.7;
-        }
-
-        // Apply speed to position.
-        this.sprite.position.x += this.speedX;
-
-        var groundBeneath = this.game.getGroundBeneathEntity(this);
-        this.sprite.position.y += this.speedY;
-        var newGroundBeneath = this.game.getGroundBeneathEntity(this);
-        if (groundBeneath != newGroundBeneath) {
-            // collide with old ground beneath
-            // we went through groundBeneith, so reset our height to be its.
-            var oldGroundY = groundBeneath ? groundBeneath.sprite.position.y : NEGINFINITY;
-            var newGroundY = newGroundBeneath ? newGroundBeneath.sprite.position.y : NEGINFINITY;
-            this.sprite.position.y = Math.max(oldGroundY, newGroundY) + MAGIC_NUMBER;
-            this.speedY = 0;
-        }
-
-        // facing
-        if ((this.direction == -1 && this.speedX > 0) || (this.direction == 1 && this.speedX < 0)) {
-            this.sprite.scale.x *= -1;
-            this.direction *= -1;
-        }
-
-        // friction
-        if (this.speedX) {
-            this.speedX *= 0.92;
-            if (Math.abs(this.speedX) < 0.50) {
-                this.speedX = 0;
-            }
-        }
-
-        // Highlight the trail of blocks we enter.
-        if (game.debug) {
-            var bc = game.localToBlock(this.sprite.position.x, this.sprite.position.y);
-            game.addSpriteForTicks(game.outlineBlock(bc[0], bc[1]), 30);
-
-            var boundingBox = game.boundingBox(this);
-            game.addSpriteForTicks(game.drawRect(boundingBox[0], boundingBox[1], 0x00ff00), 1);
+            game.panCamera(cameraMotion.x, cameraMotion.y);
         }
     };
 
     Player.prototype.teleport = function (x, y) {
         var lc = game.blockToLocal(x, y);
-        this.sprite.position.set(lc[0], lc[1], 0);
-    };
-
-    Player.prototype.jump = function () {
-        if (this.game.onGround(this)) {
-            this.speedY = 13;
-        }
+        this.sprite.position.set(lc[0], lc[1] + HALF_BLOCK + (Math.abs(this.sprite.scale.y) / 2), 0);
     };
 
     Player.prototype.dig = function () {
@@ -594,26 +667,6 @@ var Game = (function () {
         }
     };
 
-    Game.prototype.handleInput = function () {
-        if (this.input.jump) {
-            this.player.jump();
-        } else if (this.input.down) {
-            // do nothing
-        }
-
-        if (this.input.right) {
-            this.player.speedX += PLAYER_ACCELERATION;
-            this.player.speedX = Math.max(this.player.speedX, PLAYER_MAX_SPEED);
-        } else if (this.input.left) {
-            this.player.speedX -= PLAYER_ACCELERATION;
-            this.player.speedX = Math.min(this.player.speedX, -PLAYER_MAX_SPEED);
-        }
-
-        if (this.input.dig) {
-            this.player.dig();
-        }
-    };
-
     Game.prototype.handleKey = function (event) {
         var key = INPUT_MAP[event.which];
         if (!key) {
@@ -629,7 +682,9 @@ var Game = (function () {
     };
 
     Game.prototype.clearInput = function () {
-        console.log('clearing input');
+        if (this.debug) {
+            console.log('clearing input');
+        }
         for (var key in this.input) {
             this.input[key] = false;
         }
@@ -666,8 +721,8 @@ var Game = (function () {
     // Returns the coords of the top left corner of the given block coords.
     Game.prototype.blockToLocalCorner = function (x, y) {
         return [
-            (x * BLOCK_SIZE) - (BLOCK_SIZE / 2),
-            (y * BLOCK_SIZE) - (BLOCK_SIZE / 2)
+            (x * BLOCK_SIZE) - HALF_BLOCK,
+            (y * BLOCK_SIZE) - HALF_BLOCK
         ];
     };
 
@@ -824,14 +879,32 @@ var Game = (function () {
         });
     };
 
-    Game.prototype.boundingBox = function (entity) {
-        var width = entity.sprite.scale.x;
-        var height = entity.sprite.scale.y;
-        var xCenter = entity.sprite.position.x;
-        var yCenter = entity.sprite.position.y;
+    // Compute the local GL rectangle corresponding to the visual boundary of a
+    // sprite at its current position.
+    Game.prototype.boundingBox = function (sprite) {
+        var xCenter = sprite.position.x;
+        var yCenter = sprite.position.y;
+        var width = Math.abs(sprite.scale.x);
+        var height = Math.abs(sprite.scale.y);
         var topLeft = [xCenter - width / 2, yCenter + height / 2];
         var bottomRight = [xCenter + width / 2, yCenter - height / 2];
         return [topLeft, bottomRight];
+    };
+
+    // Find the set of solid blocks which are fully or partially inside the given
+    // rectangle.
+    Game.prototype.blockCollisions = function (topLeftLc, bottomRightLc) {
+        var nearestTopLeftBc = game.localToBlock(topLeftLc[0], topLeftLc[1]);
+        var nearestBottomRightBc = game.localToBlock(bottomRightLc[0], bottomRightLc[1]);
+        var blocks = [];
+        for (var x = nearestTopLeftBc[0]; x <= nearestBottomRightBc[0]; x++) {
+            for (var y = nearestTopLeftBc[1]; y >= nearestBottomRightBc[1]; y--) {
+                if (this.terrainGrid.has(x, y)) {
+                    blocks.push([x, y]);
+                }
+            }
+        }
+        return blocks;
     };
 
     Game.prototype.onGround = function (entity) {
@@ -844,7 +917,6 @@ var Game = (function () {
 
     // Single tick of game time (1 frame)
     Game.prototype.tick = function () {
-        this.handleInput();
         if (this.hasRendered) {
             this.generateVisibleWorld();
         }
@@ -858,7 +930,7 @@ var Game = (function () {
                 this.removeSprites.splice(i--, 1);
             }
         }
-        if (tickCount % 600 == 10) {
+        if (this.debug && tickCount % 600 == 10) {
             console.log(this.scene.children.length, " objects in scene");
         }
         tickCount++;
@@ -931,7 +1003,6 @@ var Game = (function () {
         var bottomRightBlockY = (chunk.chunkY + 1) * CHUNK_SIZE;
         var tlLc = this.blockToLocalCorner(topLeftBlockX, topLeftBlockY);
         var brLc = this.blockToLocalCorner(bottomRightBlockX, bottomRightBlockY);
-        console.log(tlLc, brLc);
         return this.drawRect(tlLc, brLc, color);
     };
     return Game;
