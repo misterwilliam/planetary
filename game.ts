@@ -91,28 +91,6 @@ class Game {
     }
   }
 
-  handleInput() {
-    if (this.input.jump) {
-      this.player.jump();
-    } else if (this.input.down) {
-      // do nothing
-    }
-
-    if (this.input.right) {
-      this.player.speedX += PLAYER_ACCELERATION;
-      this.player.speedX = Math.max(
-          this.player.speedX, PLAYER_MAX_SPEED);
-    }  else if (this.input.left) {
-      this.player.speedX -= PLAYER_ACCELERATION;
-      this.player.speedX = Math.min(
-          this.player.speedX, -PLAYER_MAX_SPEED);
-    }
-
-    if (this.input.dig) {
-      this.player.dig();
-    }
-  }
-
   handleKey(event:KeyboardEvent) {
     var key = INPUT_MAP[event.which];
     if (!key) {
@@ -128,7 +106,9 @@ class Game {
   }
 
   clearInput() {
-    console.log('clearing input');
+    if (this.debug) {
+      console.log('clearing input');
+    }
     for (var key in this.input) {
       this.input[key] = false;
     }
@@ -164,8 +144,8 @@ class Game {
   // Returns the coords of the top left corner of the given block coords.
   blockToLocalCorner(x:number, y:number):number[] {
     return [
-      (x * BLOCK_SIZE) - (BLOCK_SIZE / 2),
-      (y * BLOCK_SIZE) - (BLOCK_SIZE / 2)
+      (x * BLOCK_SIZE) - HALF_BLOCK,
+      (y * BLOCK_SIZE) - HALF_BLOCK
     ]
   }
 
@@ -327,14 +307,34 @@ class Game {
     });
   }
 
-  boundingBox(entity:Entity):number[][] {
-    var width = entity.sprite.scale.x;
-    var height = entity.sprite.scale.y;
-    var xCenter = entity.sprite.position.x;
-    var yCenter = entity.sprite.position.y;
+  // Compute the local GL rectangle corresponding to the visual boundary of a
+  // sprite at its current position.
+  boundingBox(sprite:THREE.Object3D):number[][] {
+    var xCenter = sprite.position.x;
+    var yCenter = sprite.position.y;
+    var width = Math.abs(sprite.scale.x);
+    var height = Math.abs(sprite.scale.y);
     var topLeft = [xCenter - width / 2, yCenter + height / 2];
     var bottomRight = [xCenter + width / 2, yCenter - height / 2];
     return [topLeft, bottomRight];
+  }
+
+  // Find the set of solid blocks which are fully or partially inside the given
+  // rectangle.
+  blockCollisions(topLeftLc:number[], bottomRightLc:number[]):number[][] {
+    var nearestTopLeftBc =
+      game.localToBlock(topLeftLc[0], topLeftLc[1]);
+    var nearestBottomRightBc =
+      game.localToBlock(bottomRightLc[0], bottomRightLc[1]);
+    var blocks : number[][] = [];
+    for (var x = nearestTopLeftBc[0]; x <= nearestBottomRightBc[0]; x++) {
+      for (var y = nearestTopLeftBc[1]; y >= nearestBottomRightBc[1]; y--) {
+        if (this.terrainGrid.has(x, y)) {
+          blocks.push([x,y]);
+        }
+      }
+    }
+    return blocks;
   }
 
   onGround(entity:Entity) : boolean {
@@ -347,7 +347,6 @@ class Game {
 
   // Single tick of game time (1 frame)
   tick() {
-    this.handleInput();
     if (this.hasRendered) {
       this.generateVisibleWorld();
     }
@@ -361,7 +360,7 @@ class Game {
         this.removeSprites.splice(i--, 1);
       }
     }
-    if (tickCount % 600 == 10) {
+    if (this.debug && tickCount % 600 == 10) {
       console.log(this.scene.children.length, " objects in scene");
     }
     tickCount++;
@@ -437,7 +436,6 @@ class Game {
     var bottomRightBlockY = (chunk.chunkY + 1) * CHUNK_SIZE;
     var tlLc = this.blockToLocalCorner(topLeftBlockX, topLeftBlockY);
     var brLc = this.blockToLocalCorner(bottomRightBlockX, bottomRightBlockY)
-    console.log(tlLc, brLc);
     return this.drawRect(tlLc, brLc, color);
   }
 }
