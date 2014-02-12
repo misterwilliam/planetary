@@ -892,10 +892,17 @@ var Game = (function () {
     };
 
     // Find the set of solid blocks which are fully or partially inside the given
-    // rectangle.
+    // rectangle. Blocks touching but outside are not considered collisions.
     Game.prototype.blockCollisions = function (topLeftLc, bottomRightLc) {
-        var nearestTopLeftBc = game.localToBlock(topLeftLc[0], topLeftLc[1]);
-        var nearestBottomRightBc = game.localToBlock(bottomRightLc[0], bottomRightLc[1]);
+        // We round "in" on edges.
+        var nearestTopLeftBc = [
+            Math.round(topLeftLc[0] / BLOCK_SIZE),
+            Math.ceil((topLeftLc[1] / BLOCK_SIZE) - 0.5)
+        ];
+        var nearestBottomRightBc = [
+            Math.ceil((bottomRightLc[0] / BLOCK_SIZE) - 0.5),
+            Math.round(bottomRightLc[1] / BLOCK_SIZE)
+        ];
         var blocks = [];
         for (var x = nearestTopLeftBc[0]; x <= nearestBottomRightBc[0]; x++) {
             for (var y = nearestTopLeftBc[1]; y >= nearestBottomRightBc[1]; y--) {
