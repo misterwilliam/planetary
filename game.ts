@@ -7,6 +7,7 @@
 /// <reference path='atmosphere.ts'/>
 /// <reference path='boar.ts'/>
 /// <reference path='plant.ts'/>
+/// <reference path='super-weed.ts'/>
 /// <reference path='tree.ts'/>
 /// <reference path='player.ts'/>
 /// <reference path='background.ts'/>
@@ -209,6 +210,9 @@ class Game {
 
     var boar = new Boar(-5, 2);
     this.addEntity(boar);
+
+    var superWeed = new SuperWeed(15, 0);
+    this.addEntity(superWeed);
 
     window.addEventListener('keydown', this.handleKey.bind(this));
     window.addEventListener('keyup', this.handleKey.bind(this));
