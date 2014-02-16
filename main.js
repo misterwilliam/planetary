@@ -353,6 +353,57 @@ var Plant = (function () {
     };
     return Plant;
 })();
+var SUPER_WEED_MATERIAL = LoadJaggyMaterial('images/super-weed.png');
+var GROW_CYCLE = 50;
+
+var WEED_GRID = new Grid();
+var MAX_WEEDS = 1000;
+var num_weeds = 0;
+
+var SuperWeed = (function () {
+    function SuperWeed(x, y) {
+        this.x = x;
+        this.y = y;
+        this.sprite = new THREE.Sprite(SUPER_WEED_MATERIAL);
+        this.id = -1;
+        this.growTimer = GROW_CYCLE;
+        this.numSprouts = 0;
+        this.age = 0;
+        this.x = x;
+        this.y = y;
+        var lc = game.blockToLocal(x, y);
+        this.sprite.position.set(lc[0], lc[1] + 15, -1);
+        this.sprite.scale.set(4 * 8, 4 * 8, 1.0);
+        WEED_GRID.set(this.x, this.y, this);
+        num_weeds++;
+    }
+    SuperWeed.prototype.tick = function () {
+        if (this.numSprouts > 1 || num_weeds > MAX_WEEDS) {
+            return;
+        }
+        this.age++;
+        if (this.growTimer == 0) {
+            var index = Math.floor(Math.random() * 4);
+            var neighbors = Grid.neighbors(this.x, this.y, 1);
+            if (this.isHospitable(neighbors[index][0], neighbors[index][1])) {
+                var newSuperWeed = new SuperWeed(neighbors[index][0], neighbors[index][1]);
+                game.addEntity(newSuperWeed);
+                this.numSprouts++;
+            }
+            this.growTimer = GROW_CYCLE;
+        } else {
+            this.growTimer--;
+        }
+    };
+
+    SuperWeed.prototype.isHospitable = function (x, y) {
+        var isOkay = !WEED_GRID.has(x, y);
+        isOkay = isOkay && (y >= 0);
+        isOkay = isOkay && (y < 20);
+        return isOkay;
+    };
+    return SuperWeed;
+})();
 var MAX_HEIGHT = 7;
 var GROW_SPEED = 60;
 
@@ -598,6 +649,7 @@ var BackgroundController = (function () {
 /// <reference path='atmosphere.ts'/>
 /// <reference path='boar.ts'/>
 /// <reference path='plant.ts'/>
+/// <reference path='super-weed.ts'/>
 /// <reference path='tree.ts'/>
 /// <reference path='player.ts'/>
 /// <reference path='background.ts'/>
@@ -782,6 +834,9 @@ var Game = (function () {
 
         var boar = new Boar(-5, 2);
         this.addEntity(boar);
+
+        var superWeed = new SuperWeed(15, 0);
+        this.addEntity(superWeed);
 
         window.addEventListener('keydown', this.handleKey.bind(this));
         window.addEventListener('keyup', this.handleKey.bind(this));
