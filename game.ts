@@ -3,14 +3,14 @@
 /// <reference path='consts.ts'/>
 /// <reference path='grid.ts'/>
 /// <reference path='ground.ts'/>
-/// <reference path='air-generator.ts'/>
 /// <reference path='atmosphere.ts'/>
-/// <reference path='boar.ts'/>
-/// <reference path='plant.ts'/>
-/// <reference path='super-weed.ts'/>
-/// <reference path='tree.ts'/>
 /// <reference path='player.ts'/>
 /// <reference path='background.ts'/>
+/// <reference path='universe/entities/air-generator.ts'/>
+/// <reference path='universe/entities/boar.ts'/>
+/// <reference path='universe/entities/plant.ts'/>
+/// <reference path='universe/entities/super-weed.ts'/>
+/// <reference path='universe/entities/tree.ts'/>
 
 var INPUT_MAP = {
   87:  'jump',  // w
@@ -39,7 +39,7 @@ function LoadJaggyMaterial(url:string) {
 };
 
 interface Entity {
-  tick():void;
+  tick() : void;
   sprite : THREE.Sprite;
   id : number
 }
