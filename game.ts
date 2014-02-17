@@ -1,16 +1,19 @@
 /// <reference path='lib/three.d.ts'/>
 /// <reference path='lib/seedrandom.d.ts'/>
-/// <reference path='consts.ts'/>
-/// <reference path='grid.ts'/>
-/// <reference path='ground.ts'/>
-/// <reference path='atmosphere.ts'/>
-/// <reference path='player.ts'/>
-/// <reference path='background.ts'/>
+
+/// <reference path='engine/entity.ts'/>
+/// <reference path='engine/grid.ts'/>
 /// <reference path='universe/entities/air-generator.ts'/>
 /// <reference path='universe/entities/boar.ts'/>
 /// <reference path='universe/entities/plant.ts'/>
 /// <reference path='universe/entities/super-weed.ts'/>
 /// <reference path='universe/entities/tree.ts'/>
+
+/// <reference path='consts.ts'/>
+/// <reference path='ground.ts'/>
+/// <reference path='atmosphere.ts'/>
+/// <reference path='player.ts'/>
+/// <reference path='background.ts'/>
 
 var INPUT_MAP = {
   87:  'jump',  // w
@@ -37,18 +40,6 @@ function LoadJaggyMaterial(url:string) {
   texture.magFilter = texture.minFilter = THREE.NearestFilter;
   return new THREE.SpriteMaterial({map: texture});
 };
-
-interface Entity {
-  tick() : void;
-  sprite : THREE.Sprite;
-  id : number
-}
-
-interface BlockAlignedEntity extends Entity {
-  // x and y are in blockspace
-  x: number;
-  y: number;
-}
 
 class Game {
   scene = new THREE.Scene();
