@@ -241,27 +241,6 @@ var Ground = (function () {
     };
     return Ground;
 })();
-var AIR_GENERATOR_MATERIAL = LoadJaggyMaterial('images/air-maker.png');
-
-var AirGenerator = (function () {
-    function AirGenerator(x, y) {
-        this.x = x;
-        this.y = y;
-        this.sprite = new THREE.Sprite(AIR_GENERATOR_MATERIAL);
-        this.id = -1;
-        var lc = game.blockToLocal(x, y);
-        this.sprite.position.set(lc[0], lc[1] + 15, -1);
-        this.sprite.scale.set(4 * 128, 4 * 128, 1.0);
-
-        var points = Grid.neighbors(x, y, 30);
-        for (var i = 0; i < points.length; i++) {
-            game.atmosphereController.addAir(points[i][0], points[i][1]);
-        }
-    }
-    AirGenerator.prototype.tick = function () {
-    };
-    return AirGenerator;
-})();
 var ATMOS_MAT = new THREE.MeshBasicMaterial({ color: 0x1e1e1e });
 ATMOS_MAT.transparent = true;
 ATMOS_MAT.blending = THREE.CustomBlending;
@@ -287,164 +266,6 @@ var AtmosphereController = (function () {
         this.scene.add(mesh);
     };
     return AtmosphereController;
-})();
-var BOAR_MATERIAL = LoadJaggyMaterial('images/boar.png');
-
-var Boar = (function () {
-    function Boar(x, y) {
-        this.x = x;
-        this.y = y;
-        this.sprite = new THREE.Sprite(BOAR_MATERIAL);
-        this.id = -1;
-        var lc = game.blockToLocal(x, y);
-        this.sprite.position.set(lc[0], lc[1] + 15, -1);
-        this.sprite.scale.set(4 * 32, 4 * 32, 1.0);
-    }
-    Boar.prototype.tick = function () {
-    };
-    return Boar;
-})();
-var GREEN_MATERIAL = LoadJaggyMaterial('images/plant.png');
-var BROWN_MATERIAL = LoadJaggyMaterial('images/plant-brown.png');
-var BLACK_MATERIAL = LoadJaggyMaterial('images/plant-black.png');
-
-var Plant = (function () {
-    function Plant(x, y) {
-        this.x = x;
-        this.y = y;
-        this.sprite = new THREE.Sprite(GREEN_MATERIAL);
-        this.ticksSinceLastDrop = 0;
-        this.ticksSinceLastDecay = 0;
-        this.life = 100;
-        this.id = -1;
-        this.dropWater = function () {
-            var neighborCoords = Grid.entityNeighbors(this, 2);
-            neighborCoords.forEach(function (coord) {
-                var x = coord[0];
-                var y = coord[1];
-                var ground = game.terrainGrid.get(x, y);
-                if (ground) {
-                    ground.water(20);
-                }
-            });
-        };
-        var lc = game.blockToLocal(x, y);
-        this.sprite.position.set(lc[0], lc[1], 0);
-        this.sprite.scale.set(13 * 4, 21 * 4, 1.0);
-    }
-    Plant.prototype.tick = function () {
-        if (++this.ticksSinceLastDrop == 60) {
-            this.dropWater();
-            this.ticksSinceLastDrop = 0;
-        }
-        if (++this.ticksSinceLastDecay == 60 * 5) {
-            this.decay(20);
-            this.ticksSinceLastDecay = 0;
-        }
-    };
-
-    Plant.prototype.decay = function (amt) {
-        this.life -= amt;
-        if (this.life <= 0) {
-            this.sprite.material = BLACK_MATERIAL;
-        } else if (this.life <= 50) {
-            this.sprite.material = BROWN_MATERIAL;
-        }
-    };
-    return Plant;
-})();
-var SUPER_WEED_MATERIAL = LoadJaggyMaterial('images/super-weed.png');
-var GROW_CYCLE = 50;
-
-var WEED_GRID = new Grid();
-var MAX_WEEDS = 1000;
-var num_weeds = 0;
-
-var SuperWeed = (function () {
-    function SuperWeed(x, y) {
-        this.x = x;
-        this.y = y;
-        this.sprite = new THREE.Sprite(SUPER_WEED_MATERIAL);
-        this.id = -1;
-        this.growTimer = GROW_CYCLE;
-        this.numSprouts = 0;
-        this.age = 0;
-        this.x = x;
-        this.y = y;
-        var lc = game.blockToLocal(x, y);
-        this.sprite.position.set(lc[0], lc[1] + 15, -1);
-        this.sprite.scale.set(4 * 8, 4 * 8, 1.0);
-        WEED_GRID.set(this.x, this.y, this);
-        num_weeds++;
-    }
-    SuperWeed.prototype.tick = function () {
-        if (this.numSprouts > 1 || num_weeds > MAX_WEEDS) {
-            return;
-        }
-        this.age++;
-        if (this.growTimer == 0) {
-            var index = Math.floor(Math.random() * 4);
-            var neighbors = Grid.neighbors(this.x, this.y, 1);
-            if (this.isHospitable(neighbors[index][0], neighbors[index][1])) {
-                var newSuperWeed = new SuperWeed(neighbors[index][0], neighbors[index][1]);
-                game.addEntity(newSuperWeed);
-                this.numSprouts++;
-            }
-            this.growTimer = GROW_CYCLE;
-        } else {
-            this.growTimer--;
-        }
-    };
-
-    SuperWeed.prototype.isHospitable = function (x, y) {
-        var isOkay = !WEED_GRID.has(x, y);
-        isOkay = isOkay && (y >= 0);
-        isOkay = isOkay && (y < 20);
-        return isOkay;
-    };
-    return SuperWeed;
-})();
-var MAX_HEIGHT = 7;
-var GROW_SPEED = 60;
-
-var BARK_MATERIAL = LoadJaggyMaterial('images/bark.png');
-var LEAVES_MATERIAL = LoadJaggyMaterial('images/leaves.png');
-
-var Tree = (function () {
-    function Tree(x, y) {
-        this.x = x;
-        this.y = y;
-        this.sprite = new THREE.Sprite(BARK_MATERIAL);
-        this.id = -1;
-        this.height = 0;
-        this.hasLeaves = false;
-        this.ticksSinceLastGrow = 0;
-        this.grow = function () {
-            if (this.height < MAX_HEIGHT) {
-                var bark = new THREE.Sprite(BARK_MATERIAL);
-                var lc = game.blockToLocal(this.x, this.y + this.height);
-                bark.position.set(lc[0], lc[1], -2);
-                bark.scale.set(16 * 4, 16 * 4, 1.0);
-                game.scene.add(bark);
-                this.height++;
-            } else if (!this.hasLeaves) {
-                var leaves = new THREE.Sprite(LEAVES_MATERIAL);
-                var lc = game.blockToLocal(this.x, this.y + this.height);
-                leaves.position.set(lc[0], lc[1], -1);
-                leaves.scale.set(64 * 4, 32 * 4, 1.0);
-                game.scene.add(leaves);
-                this.hasLeaves = true;
-            }
-        };
-        this.grow();
-    }
-    Tree.prototype.tick = function () {
-        if (++this.ticksSinceLastGrow == GROW_SPEED) {
-            this.grow();
-            this.ticksSinceLastGrow = 0;
-        }
-    };
-    return Tree;
 })();
 var DUDE_MATERIAL = LoadJaggyMaterial('images/dude.png');
 var FLASH_MATERIAL = LoadJaggyMaterial('images/flash.png');
@@ -640,19 +461,198 @@ var BackgroundController = (function () {
     };
     return BackgroundController;
 })();
+var AIR_GENERATOR_MATERIAL = LoadJaggyMaterial('images/air-maker.png');
+
+var AirGenerator = (function () {
+    function AirGenerator(x, y) {
+        this.x = x;
+        this.y = y;
+        this.sprite = new THREE.Sprite(AIR_GENERATOR_MATERIAL);
+        this.id = -1;
+        var lc = game.blockToLocal(x, y);
+        this.sprite.position.set(lc[0], lc[1] + 15, -1);
+        this.sprite.scale.set(4 * 128, 4 * 128, 1.0);
+
+        var points = Grid.neighbors(x, y, 30);
+        for (var i = 0; i < points.length; i++) {
+            game.atmosphereController.addAir(points[i][0], points[i][1]);
+        }
+    }
+    AirGenerator.prototype.tick = function () {
+    };
+    return AirGenerator;
+})();
+var BOAR_MATERIAL = LoadJaggyMaterial('images/boar.png');
+
+var Boar = (function () {
+    function Boar(x, y) {
+        this.x = x;
+        this.y = y;
+        this.sprite = new THREE.Sprite(BOAR_MATERIAL);
+        this.id = -1;
+        var lc = game.blockToLocal(x, y);
+        this.sprite.position.set(lc[0], lc[1] + 15, -1);
+        this.sprite.scale.set(4 * 32, 4 * 32, 1.0);
+    }
+    Boar.prototype.tick = function () {
+    };
+    return Boar;
+})();
+var GREEN_MATERIAL = LoadJaggyMaterial('images/plant.png');
+var BROWN_MATERIAL = LoadJaggyMaterial('images/plant-brown.png');
+var BLACK_MATERIAL = LoadJaggyMaterial('images/plant-black.png');
+
+var Plant = (function () {
+    function Plant(x, y) {
+        this.x = x;
+        this.y = y;
+        this.sprite = new THREE.Sprite(GREEN_MATERIAL);
+        this.ticksSinceLastDrop = 0;
+        this.ticksSinceLastDecay = 0;
+        this.life = 100;
+        this.id = -1;
+        this.dropWater = function () {
+            var neighborCoords = Grid.entityNeighbors(this, 2);
+            neighborCoords.forEach(function (coord) {
+                var x = coord[0];
+                var y = coord[1];
+                var ground = game.terrainGrid.get(x, y);
+                if (ground) {
+                    ground.water(20);
+                }
+            });
+        };
+        var lc = game.blockToLocal(x, y);
+        this.sprite.position.set(lc[0], lc[1], 0);
+        this.sprite.scale.set(13 * 4, 21 * 4, 1.0);
+    }
+    Plant.prototype.tick = function () {
+        if (++this.ticksSinceLastDrop == 60) {
+            this.dropWater();
+            this.ticksSinceLastDrop = 0;
+        }
+        if (++this.ticksSinceLastDecay == 60 * 5) {
+            this.decay(20);
+            this.ticksSinceLastDecay = 0;
+        }
+    };
+
+    Plant.prototype.decay = function (amt) {
+        this.life -= amt;
+        if (this.life <= 0) {
+            this.sprite.material = BLACK_MATERIAL;
+        } else if (this.life <= 50) {
+            this.sprite.material = BROWN_MATERIAL;
+        }
+    };
+    return Plant;
+})();
+var SUPER_WEED_MATERIAL = LoadJaggyMaterial('images/super-weed.png');
+var GROW_CYCLE = 50;
+
+var WEED_GRID = new Grid();
+var MAX_WEEDS = 1000;
+var num_weeds = 0;
+
+var SuperWeed = (function () {
+    function SuperWeed(x, y) {
+        this.x = x;
+        this.y = y;
+        this.sprite = new THREE.Sprite(SUPER_WEED_MATERIAL);
+        this.id = -1;
+        this.growTimer = GROW_CYCLE;
+        this.numSprouts = 0;
+        this.age = 0;
+        this.x = x;
+        this.y = y;
+        var lc = game.blockToLocal(x, y);
+        this.sprite.position.set(lc[0], lc[1] + 15, -1);
+        this.sprite.scale.set(4 * 8, 4 * 8, 1.0);
+        WEED_GRID.set(this.x, this.y, this);
+        num_weeds++;
+    }
+    SuperWeed.prototype.tick = function () {
+        if (this.numSprouts > 1 || num_weeds > MAX_WEEDS) {
+            return;
+        }
+        this.age++;
+        if (this.growTimer == 0) {
+            var index = Math.floor(Math.random() * 4);
+            var neighbors = Grid.neighbors(this.x, this.y, 1);
+            if (this.isHospitable(neighbors[index][0], neighbors[index][1])) {
+                var newSuperWeed = new SuperWeed(neighbors[index][0], neighbors[index][1]);
+                game.addEntity(newSuperWeed);
+                this.numSprouts++;
+            }
+            this.growTimer = GROW_CYCLE;
+        } else {
+            this.growTimer--;
+        }
+    };
+
+    SuperWeed.prototype.isHospitable = function (x, y) {
+        var isOkay = !WEED_GRID.has(x, y);
+        isOkay = isOkay && (y >= 0);
+        isOkay = isOkay && (y < 20);
+        return isOkay;
+    };
+    return SuperWeed;
+})();
+var MAX_HEIGHT = 7;
+var GROW_SPEED = 60;
+
+var BARK_MATERIAL = LoadJaggyMaterial('images/bark.png');
+var LEAVES_MATERIAL = LoadJaggyMaterial('images/leaves.png');
+
+var Tree = (function () {
+    function Tree(x, y) {
+        this.x = x;
+        this.y = y;
+        this.sprite = new THREE.Sprite(BARK_MATERIAL);
+        this.id = -1;
+        this.height = 0;
+        this.hasLeaves = false;
+        this.ticksSinceLastGrow = 0;
+        this.grow = function () {
+            if (this.height < MAX_HEIGHT) {
+                var bark = new THREE.Sprite(BARK_MATERIAL);
+                var lc = game.blockToLocal(this.x, this.y + this.height);
+                bark.position.set(lc[0], lc[1], -2);
+                bark.scale.set(16 * 4, 16 * 4, 1.0);
+                game.scene.add(bark);
+                this.height++;
+            } else if (!this.hasLeaves) {
+                var leaves = new THREE.Sprite(LEAVES_MATERIAL);
+                var lc = game.blockToLocal(this.x, this.y + this.height);
+                leaves.position.set(lc[0], lc[1], -1);
+                leaves.scale.set(64 * 4, 32 * 4, 1.0);
+                game.scene.add(leaves);
+                this.hasLeaves = true;
+            }
+        };
+        this.grow();
+    }
+    Tree.prototype.tick = function () {
+        if (++this.ticksSinceLastGrow == GROW_SPEED) {
+            this.grow();
+            this.ticksSinceLastGrow = 0;
+        }
+    };
+    return Tree;
+})();
 /// <reference path='lib/three.d.ts'/>
 /// <reference path='lib/seedrandom.d.ts'/>
 /// <reference path='consts.ts'/>
 /// <reference path='grid.ts'/>
 /// <reference path='ground.ts'/>
-/// <reference path='air-generator.ts'/>
 /// <reference path='atmosphere.ts'/>
-/// <reference path='boar.ts'/>
-/// <reference path='plant.ts'/>
-/// <reference path='super-weed.ts'/>
-/// <reference path='tree.ts'/>
 /// <reference path='player.ts'/>
 /// <reference path='background.ts'/>
+/// <reference path='universe/entities/air-generator.ts'/>
+/// <reference path='universe/entities/boar.ts'/>
+/// <reference path='universe/entities/plant.ts'/>
+/// <reference path='universe/entities/super-weed.ts'/>
+/// <reference path='universe/entities/tree.ts'/>
 var INPUT_MAP = {
     87: 'jump',
     83: 'down',
