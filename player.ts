@@ -29,14 +29,14 @@ class Player implements Entity {
   }
 
   tick() {
-    if (game.input.dig) {
+    if (game.inputController.input.dig) {
       this.dig();
     }
 
-    if (game.input.right) {
+    if (game.inputController.input.right) {
       this.speedX += WALK_ACCELERATION;
       this.sprite.scale.x = -DUDE_WIDTH;
-    } else if (game.input.left) {
+    } else if (game.inputController.input.left) {
       this.speedX -= WALK_ACCELERATION;
       this.sprite.scale.x = DUDE_WIDTH;
     }
@@ -48,7 +48,7 @@ class Player implements Entity {
       this.speedX *= DRAG;
     }
 
-    if (game.input.jump) {
+    if (game.inputController.input.jump) {
       if (this.onGround) {
         this.speedY = JUMP_INITIAL_SPEED;
         this.jumpTicks = JUMP_BOOST_TICKS;
