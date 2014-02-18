@@ -116,7 +116,9 @@ class TerrainStore {
 class Ground implements Entity{
   sprite = new THREE.Sprite(DRY_MATERIAL);
   waterLevel = 0;
+  health = 5;
   id : number = -1;
+
   constructor(public x:number, public y:number) {
     var lc = game.blockToLocal(x, y);
     this.sprite.position.set(lc[0], lc[1], 0);
@@ -154,20 +156,14 @@ class Ground implements Entity{
   }
 
   hit() {
-    var self = this;
-    game.entities.forEach(function(entity: Entity) {
-      if (entity instanceof Plant) {
-        return;
-      }
-      var plant = <Plant>(entity);
-      if (plant.x == self.x && plant.y == self.y + 1) {
-        game.removeEntity(plant);
-      }
-    });
-
-    game.scene.remove(this.sprite);
-    game.terrainGrid.clear(this.x, this.y);
-    game.terrainStore.onRemoveBlock(this.x, this.y);
+    if (--this.health <= 0) {
+      this.destroy();
+    }
   }
 
+  destroy() {
+    game.scene.remove(this.sprite);
+    game.gameModel.terrainGrid.clear(this.x, this.y);
+    game.gameModel.terrainStore.onRemoveBlock(this.x, this.y);
+  }
 }

@@ -11,6 +11,7 @@ var MAX_SPEED = HALF_BLOCK;
 var GRAVITY = 0.8;
 var FRICTION = 0.8;
 var DRAG = 0.98;
+var CLICK_RADIUS = 128;
 
 class Player implements Entity {
   speedX = 0;
@@ -29,14 +30,23 @@ class Player implements Entity {
   }
 
   tick() {
-    if (game.input.dig) {
-      this.dig();
+    var mouse = game.inputController.mouse;
+    if (mouse.lc &&
+        Math.abs(mouse.lc.x - this.sprite.position.x) <= CLICK_RADIUS &&
+        Math.abs(mouse.lc.y - this.sprite.position.y) <= CLICK_RADIUS) {
+      if (game.inputController.mouse.click) {
+        var block = game.gameModel.terrainGrid.get(mouse.bc[0], mouse.bc[1]);
+        if (block) {
+          block.hit();
+        }
+      }
+      game.addSpriteForTicks(game.outlineBlock(mouse.bc[0], mouse.bc[1]), 1);
     }
 
-    if (game.input.right) {
+    if (game.inputController.input.right) {
       this.speedX += WALK_ACCELERATION;
       this.sprite.scale.x = -DUDE_WIDTH;
-    } else if (game.input.left) {
+    } else if (game.inputController.input.left) {
       this.speedX -= WALK_ACCELERATION;
       this.sprite.scale.x = DUDE_WIDTH;
     }
@@ -48,7 +58,7 @@ class Player implements Entity {
       this.speedX *= DRAG;
     }
 
-    if (game.input.jump) {
+    if (game.inputController.input.jump) {
       if (this.onGround) {
         this.speedY = JUMP_INITIAL_SPEED;
         this.jumpTicks = JUMP_BOOST_TICKS;
@@ -107,7 +117,7 @@ class Player implements Entity {
         if (this.speedX > 0) {  // Hit left side first.
           // Ignore collision with a side that has an adjacent block, since its
           // an "inside" edge.
-          if (!game.terrainGrid.has(bc[0] - 1, bc[1])) {
+          if (!game.gameModel.terrainGrid.has(bc[0] - 1, bc[1])) {
             pos.x = Math.min(pos.x, (lc[0] - HALF_BLOCK) - DUDE_WIDTH / 2);
             if (game.debug) {
               game.addSpriteForTicks(game.drawLine(
@@ -117,7 +127,7 @@ class Player implements Entity {
             }
           }
         } else {  // Hit right side first.
-          if (!game.terrainGrid.has(bc[0] + 1, bc[1])) {
+          if (!game.gameModel.terrainGrid.has(bc[0] + 1, bc[1])) {
             pos.x = Math.max(pos.x, (lc[0] + HALF_BLOCK) + DUDE_WIDTH / 2);
             if (game.debug) {
               game.addSpriteForTicks(game.drawLine(
@@ -129,8 +139,9 @@ class Player implements Entity {
         }
       } else {
         if (this.speedY > 0) {  // Hit bottom first.
-          if (!game.terrainGrid.has(bc[0], bc[1] - 1)) {
-            pos.y = Math.min(pos.y, (lc[1] - HALF_BLOCK) + DUDE_HEIGHT / 2);
+          if (!game.gameModel.terrainGrid.has(bc[0], bc[1] - 1)) {
+            pos.y = Math.min(pos.y, (lc[1] - HALF_BLOCK) - DUDE_HEIGHT / 2);
+            this.jumpTicks = 0;
             if (game.debug) {
               game.addSpriteForTicks(game.drawLine(
                 [lc[0] + HALF_BLOCK, lc[1] - HALF_BLOCK],
@@ -139,7 +150,7 @@ class Player implements Entity {
             }
           }
         } else {  // Hit top first.
-          if (!game.terrainGrid.has(bc[0], bc[1] + 1)) {
+          if (!game.gameModel.terrainGrid.has(bc[0], bc[1] + 1)) {
             pos.y = Math.max(pos.y, (lc[1] + HALF_BLOCK) + DUDE_HEIGHT / 2);
             this.onGround = true;
             if (game.debug) {
@@ -173,24 +184,5 @@ class Player implements Entity {
       // Align base of sprite to top of block.
       lc[1] + HALF_BLOCK + (Math.abs(this.sprite.scale.y) / 2),
       0);
-  }
-
-  dig() {
-    var now = getNow();
-    if (now - 10 < this.lastDig) {
-      return;
-    }
-    this.lastDig = now;
-
-    var flashSprite = this.flashSprite;
-    flashSprite.position.set(this.sprite.position.x,
-                             this.sprite.position.y - 30,
-                             1);
-    game.addSpriteForTicks(flashSprite, 10);
-
-    var ground = this.game.getGroundBeneathEntity(this);
-    if (ground) {
-      ground.hit();
-    }
   }
 }

@@ -1,25 +1,21 @@
 /// <reference path='lib/three.d.ts'/>
 /// <reference path='lib/seedrandom.d.ts'/>
-/// <reference path='consts.ts'/>
-/// <reference path='grid.ts'/>
-/// <reference path='ground.ts'/>
-/// <reference path='atmosphere.ts'/>
-/// <reference path='player.ts'/>
-/// <reference path='background.ts'/>
+
+/// <reference path='engine/entity.ts'/>
+/// <reference path='engine/grid.ts'/>
 /// <reference path='universe/entities/air-generator.ts'/>
 /// <reference path='universe/entities/boar.ts'/>
 /// <reference path='universe/entities/plant.ts'/>
 /// <reference path='universe/entities/super-weed.ts'/>
 /// <reference path='universe/entities/tree.ts'/>
 
-var INPUT_MAP = {
-  87:  'jump',  // w
-  83:  'down',  // s
-  68:  'right', // d
-  65:  'left',  // a
-  32:  'dig',   // space
-  192: 'debug', // ~
-};
+/// <reference path='consts.ts'/>
+/// <reference path='game_model.ts'/>
+/// <reference path='ground.ts'/>
+/// <reference path='input.ts'/>
+/// <reference path='atmosphere.ts'/>
+/// <reference path='player.ts'/>
+/// <reference path='background.ts'/>
 
 var getNow = (function() {
   if (window.performance && window.performance.now) {
@@ -38,44 +34,29 @@ function LoadJaggyMaterial(url:string) {
   return new THREE.SpriteMaterial({map: texture});
 };
 
-interface Entity {
-  tick() : void;
-  sprite : THREE.Sprite;
-  id : number
-}
-
-interface BlockAlignedEntity extends Entity {
-  // x and y are in blockspace
-  x: number;
-  y: number;
-}
-
-class Game {
+class Game implements InputListener {
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(90, null, 0.1, 1000);
   renderer = new THREE.WebGLRenderer();
+  projector = new THREE.Projector();
+
+  gameModel = new GameModel();
+  inputController : InputController;  // Set in constructor
+
   now = getNow();
   lastTime = getNow();
   unprocessedFrames = 0;
-  input = {
-    jump: false, down: false, right: false, left: false, dig:false
-  };
-  lastEntityId = -1;
-  entities : Entity[] = [];
-  terrainGrid = new Grid<Ground>();
+
   debug = false;
   groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-  projector = new THREE.Projector();
   atmosphereController = new AtmosphereController(this.scene);
-  player : Player;
-  plants : Plant[] = [];
   debugSprites : THREE.Object3D[];
-  terrainStore = new TerrainStore(new FlatEarth());
   hasRendered = false;
   removeSprites : {ticks:number; sprite:THREE.Object3D}[] = [];
   cameraDeadzone = new THREE.Vector2(1000, 1000);
 
-  constructor() {
+  constructor(inputController : InputController) {
+    this.inputController = inputController;
     this.camera.position.set(0, 0, 800);
     this.resize();
     document.body.appendChild(this.renderer.domElement);
@@ -92,40 +73,47 @@ class Game {
     }
   }
 
-  handleKey(event:KeyboardEvent) {
+  // Begin InputListener interface implementation
+  handleKeyUp(event : KeyboardEvent) {
     var key = INPUT_MAP[event.which];
-    if (!key) {
-      console.log('unbound key:', event.which);
-    } else if (event.type == 'keydown') {
-      this.input[key] = true;
-    } else {
-      this.input[key] = false;
-      if (key == 'debug') {
-        this.toggleDebug();
-      }
+    if (key == 'debug') {
+      console.log("debug mode");
+      this.toggleDebug();
     }
   }
 
-  clearInput() {
+  handleClick(event : MouseEvent) {
     if (this.debug) {
-      console.log('clearing input');
-    }
-    for (var key in this.input) {
-      this.input[key] = false;
+      var lc = this.ndcToLocal(
+        (event.clientX / window.innerWidth) * 2 - 1,
+        -(event.clientY / window.innerHeight) * 2 + 1);
+      var bc = this.localToBlock(lc.x, lc.y);
+      this.addSpriteForTicks(this.outlineBlock(bc[0], bc[1], 0x00ff00), 60);
+      var cc = Chunk.blockToChunk(bc);
+      var chunk = this.gameModel.terrainStore.getChunk(cc[0], cc[1]);
+      this.addSpriteForTicks(game.outlineChunk(chunk, 0x00ff00), 60)
+      console.log('clicked block', bc, ' chunk ', cc, ' intrachunk ',
+                  chunk.getIntraChunkBlockCoords(bc[0], bc[1]));
     }
   }
+
+  handleClearInput() {
+    if (this.debug) {
+      console.log('Clear input');
+    }
+  }
+  // End InputListener interface implementation
 
   addEntity(entity:Entity) {
-    entity.id = ++this.lastEntityId;
-    this.entities[entity.id] = entity;
+    this.gameModel.addEntity(entity);
     if (entity.sprite) {
       this.scene.add(entity.sprite);
     }
   }
 
   removeEntity(entity:Entity) {
+    this.gameModel.removeEntity(entity);
     this.scene.remove(entity.sprite);
-    delete this.entities[entity.id];
   }
 
   addSpriteForTicks(sprite:THREE.Object3D, ticks:number = 1) {
@@ -170,37 +158,22 @@ class Game {
     return raycaster.ray.intersectPlane(this.groundPlane);
   }
 
-  click(event:MouseEvent) {
-    if (this.debug) {
-      var lc = this.ndcToLocal(
-        (event.clientX / window.innerWidth) * 2 - 1,
-        -(event.clientY / window.innerHeight) * 2 + 1);
-      var bc = this.localToBlock(lc.x, lc.y);
-      this.addSpriteForTicks(game.outlineBlock(bc[0], bc[1], 0x00ff00), 60);
-      var cc = Chunk.blockToChunk(bc);
-      var chunk = this.terrainStore.getChunk(cc[0], cc[1]);
-      this.addSpriteForTicks(game.outlineChunk(chunk, 0x00ff00), 60)
-      console.log('clicked block', bc, ' chunk ', cc, ' intrachunk ',
-                  chunk.getIntraChunkBlockCoords(bc[0], bc[1]));
-    }
-  }
-
   getGroundBeneathEntity(entity:Entity):Ground {
     var lc = this.localToBlock(entity.sprite.position.x,
                                entity.sprite.position.y);
     var height = lc[1] - 1;
-    while (!this.terrainGrid.has(lc[0], height)) {
+    while (!this.gameModel.terrainGrid.has(lc[0], height)) {
       if (height <= lc[1]-6) {
         return null;
       }
       height -= 1;
     }
-    return this.terrainGrid.get(lc[0], height);
+    return this.gameModel.terrainGrid.get(lc[0], height);
   }
 
   start() {
-    this.player = new Player(this);
-    this.addEntity(this.player);
+    this.gameModel.player = new Player(this);
+    this.addEntity(this.gameModel.player);
 
     var bgController = new BackgroundController(this.scene);
     bgController.drawBackground();
@@ -214,11 +187,7 @@ class Game {
     var superWeed = new SuperWeed(15, 0);
     this.addEntity(superWeed);
 
-    window.addEventListener('keydown', this.handleKey.bind(this));
-    window.addEventListener('keyup', this.handleKey.bind(this));
-    window.addEventListener('blur', this.clearInput.bind(this));
     window.addEventListener('resize', this.resize.bind(this));
-    window.addEventListener('mousedown', this.click.bind(this));
 
     this.animate();
   }
@@ -261,13 +230,13 @@ class Game {
     var bottomRightChunkCoords = Chunk.blockToChunk(bottomRight);
     for (var x = topLeftChunkCoords[0]; x <= bottomRightChunkCoords[0]; x++) {
       for (var y = topLeftChunkCoords[1]; y >= bottomRightChunkCoords[1]; y--) {
-        if (!this.terrainStore.activeChunks.has(x, y)) {
-          this.addChunk(this.terrainStore.getChunk(x, y));
+        if (!this.gameModel.terrainStore.activeChunks.has(x, y)) {
+          this.addChunk(this.gameModel.terrainStore.getChunk(x, y));
         }
       }
     }
 
-    this.terrainStore.activeChunks.forEach((x, y, chunk) => {
+    this.gameModel.terrainStore.activeChunks.forEach((x, y, chunk) => {
       if (x < topLeftChunkCoords[0] || x > bottomRightChunkCoords[0] ||
           y > topLeftChunkCoords[1] || y < bottomRightChunkCoords[1]) {
         this.removeChunk(chunk);
@@ -281,9 +250,9 @@ class Game {
   }
 
   addChunk(chunk:Chunk) {
-    this.terrainStore.activeChunks.set(chunk.chunkX, chunk.chunkY, chunk);
+    this.gameModel.terrainStore.activeChunks.set(chunk.chunkX, chunk.chunkY, chunk);
     chunk.forEach((x, y, ground) => {
-      this.terrainGrid.set(ground.x, ground.y, ground);
+      this.gameModel.terrainGrid.set(ground.x, ground.y, ground);
       this.addEntity(ground);
     });
     chunk.plants.forEach((plant) => {
@@ -299,9 +268,9 @@ class Game {
   }
 
   removeChunk(chunk:Chunk) {
-    this.terrainStore.activeChunks.clear(chunk.chunkX, chunk.chunkY);
+    this.gameModel.terrainStore.activeChunks.clear(chunk.chunkX, chunk.chunkY);
     chunk.forEach((x, y, ground) => {
-      this.terrainGrid.clear(ground.x, ground.y);
+      this.gameModel.terrainGrid.clear(ground.x, ground.y);
       this.removeEntity(ground);
     });
     chunk.plants.forEach((plant) => {
@@ -338,7 +307,7 @@ class Game {
     var blocks : number[][] = [];
     for (var x = nearestTopLeftBc[0]; x <= nearestBottomRightBc[0]; x++) {
       for (var y = nearestTopLeftBc[1]; y >= nearestBottomRightBc[1]; y--) {
-        if (this.terrainGrid.has(x, y)) {
+        if (this.gameModel.terrainGrid.has(x, y)) {
           blocks.push([x,y]);
         }
       }
@@ -359,8 +328,8 @@ class Game {
     if (this.hasRendered) {
       this.generateVisibleWorld();
     }
-    for (var id in this.entities) {
-      this.entities[id].tick();
+    for (var id in this.gameModel.entities) {
+      this.gameModel.entities[id].tick();
     }
     for (var i = 0; i < this.removeSprites.length; i++) {
       var remove = this.removeSprites[i];
@@ -451,7 +420,9 @@ class Game {
 
 var game : Game;
 window.addEventListener('load', function() {
-  game = new Game();
+  var inputController = new InputController();
+  game = new Game(inputController);
+  inputController.registerListener(game);
   game.start();
   if (document.URL.indexOf('debug') != -1) {
     game.toggleDebug();
