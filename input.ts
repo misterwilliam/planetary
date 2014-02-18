@@ -1,3 +1,24 @@
+// For most use cases, checking the state of the InputController.input is what
+// is desired for knowing the current state of the input.
+//
+// Example:
+// var input = new InputController();
+// if (input.input.jump) { ... }
+//
+// Classes that want to listen to input events should implement the
+// InputListener interface and register themselves as listeners with the
+// InputController.
+//
+// Example:
+// class MyClass implement InputListener {
+//   handleKey(event : KeyboardEvent) { ... }
+//   handleClick(event : MouseEvent) { ... }
+//   handleClearInput() { ... }
+// }
+// var c = new MyClass();
+// var input = new InputController();
+// input.registerListener(c);
+
 var INPUT_MAP = {
   87:  'jump',  // w
   83:  'down',  // s
@@ -7,6 +28,12 @@ var INPUT_MAP = {
   192: 'debug', // ~
 };
 
+interface InputListener {
+  handleKeyUp(event : KeyboardEvent): void;
+  handleClick(event : MouseEvent): void;
+  handleClearInput(): void;
+}
+
 class InputController {
   game : Game;
   input = {
@@ -14,12 +41,16 @@ class InputController {
   };
   listeners : Array<InputListener>;
 
-  constructor(game : Game) {
-    this.game = game;
+  constructor() {
+    this.listeners = new Array<InputListener>();
     window.addEventListener('keydown', this.handleKey.bind(this));
     window.addEventListener('keyup', this.handleKey.bind(this));
     window.addEventListener('mousedown', this.click.bind(this));
     window.addEventListener('blur', this.clearInput.bind(this));
+  }
+
+  registerListener(listener : InputListener) {
+    this.listeners.push(listener);
   }
 
   handleKey(event : KeyboardEvent) {
@@ -30,24 +61,15 @@ class InputController {
       this.input[key] = true;
     } else {
       this.input[key] = false;
-      if (key == 'debug') {
-        this.game.toggleDebug();
+      for (var i = 0; i < this.listeners.length; i++) {
+        this.listeners[i].handleKeyUp(event);
       }
     }
   }
 
   click(event : MouseEvent) {
-    if (this.game.debug) {
-      var lc = this.game.ndcToLocal(
-        (event.clientX / window.innerWidth) * 2 - 1,
-        -(event.clientY / window.innerHeight) * 2 + 1);
-      var bc = this.game.localToBlock(lc.x, lc.y);
-      this.game.addSpriteForTicks(this.game.outlineBlock(bc[0], bc[1], 0x00ff00), 60);
-      var cc = Chunk.blockToChunk(bc);
-      var chunk = this.game.terrainStore.getChunk(cc[0], cc[1]);
-      this.game.addSpriteForTicks(game.outlineChunk(chunk, 0x00ff00), 60)
-      console.log('clicked block', bc, ' chunk ', cc, ' intrachunk ',
-                  chunk.getIntraChunkBlockCoords(bc[0], bc[1]));
+    for (var i = 0; i < this.listeners.length; i++) {
+      this.listeners[i].handleClick(event);
     }
   }
 
@@ -56,10 +78,4 @@ class InputController {
       this.input[key] = false;
     }
   }
-}
-
-interface InputListener {
-  handleKey(event : KeyboardEvent): void;
-  handleClick(event : MouseEvent): void;
-  handleClearInput(): void;
 }

@@ -56,7 +56,8 @@ class Game implements InputListener {
   removeSprites : {ticks:number; sprite:THREE.Object3D}[] = [];
   cameraDeadzone = new THREE.Vector2(1000, 1000);
 
-  constructor() {
+  constructor(inputController : InputController) {
+    this.inputController = inputController;
     this.camera.position.set(0, 0, 800);
     this.resize();
     document.body.appendChild(this.renderer.domElement);
@@ -74,14 +75,34 @@ class Game implements InputListener {
   }
 
   // Begin InputListener interface implementation
-  handleKey(event : KeyboardEvent) {
+  handleKeyUp(event : KeyboardEvent) {
+    var key = INPUT_MAP[event.which];
+    console.log(key);
+    if (key == 'debug') {
+      console.log("debug mode");
+      this.toggleDebug();
+    }
   }
 
   handleClick(event : MouseEvent) {
-
+    if (this.debug) {
+      var lc = this.ndcToLocal(
+        (event.clientX / window.innerWidth) * 2 - 1,
+        -(event.clientY / window.innerHeight) * 2 + 1);
+      var bc = this.localToBlock(lc.x, lc.y);
+      this.addSpriteForTicks(this.outlineBlock(bc[0], bc[1], 0x00ff00), 60);
+      var cc = Chunk.blockToChunk(bc);
+      var chunk = this.terrainStore.getChunk(cc[0], cc[1]);
+      this.addSpriteForTicks(game.outlineChunk(chunk, 0x00ff00), 60)
+      console.log('clicked block', bc, ' chunk ', cc, ' intrachunk ',
+                  chunk.getIntraChunkBlockCoords(bc[0], bc[1]));
+    }
   }
 
   handleClearInput() {
+    if (this.debug) {
+      console.log('Clear input');
+    }
   }
   // End InputListener interface implementation
 
@@ -168,7 +189,6 @@ class Game implements InputListener {
 
     var superWeed = new SuperWeed(15, 0);
     this.addEntity(superWeed);
-    this.inputController = new InputController(this);
 
     window.addEventListener('resize', this.resize.bind(this));
 
@@ -403,7 +423,9 @@ class Game implements InputListener {
 
 var game : Game;
 window.addEventListener('load', function() {
-  game = new Game();
+  var inputController = new InputController();
+  game = new Game(inputController);
+  inputController.registerListener(game);
   game.start();
   if (document.URL.indexOf('debug') != -1) {
     game.toggleDebug();
