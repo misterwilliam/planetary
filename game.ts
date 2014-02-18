@@ -10,6 +10,7 @@
 /// <reference path='universe/entities/tree.ts'/>
 
 /// <reference path='consts.ts'/>
+/// <reference path='game_model.ts'/>
 /// <reference path='ground.ts'/>
 /// <reference path='input.ts'/>
 /// <reference path='atmosphere.ts'/>
@@ -37,21 +38,19 @@ class Game implements InputListener {
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(90, null, 0.1, 1000);
   renderer = new THREE.WebGLRenderer();
+  projector = new THREE.Projector();
+
+  gameModel = new GameModel();
+  inputController : InputController;  // Set in constructor
+
   now = getNow();
   lastTime = getNow();
   unprocessedFrames = 0;
-  inputController : InputController;
-  lastEntityId = -1;
-  entities : Entity[] = [];
-  terrainGrid = new Grid<Ground>();
+
   debug = false;
   groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-  projector = new THREE.Projector();
   atmosphereController = new AtmosphereController(this.scene);
-  player : Player;
-  plants : Plant[] = [];
   debugSprites : THREE.Object3D[];
-  terrainStore = new TerrainStore(new FlatEarth());
   hasRendered = false;
   removeSprites : {ticks:number; sprite:THREE.Object3D}[] = [];
   cameraDeadzone = new THREE.Vector2(1000, 1000);
@@ -92,7 +91,7 @@ class Game implements InputListener {
       var bc = this.localToBlock(lc.x, lc.y);
       this.addSpriteForTicks(this.outlineBlock(bc[0], bc[1], 0x00ff00), 60);
       var cc = Chunk.blockToChunk(bc);
-      var chunk = this.terrainStore.getChunk(cc[0], cc[1]);
+      var chunk = this.gameModel.terrainStore.getChunk(cc[0], cc[1]);
       this.addSpriteForTicks(game.outlineChunk(chunk, 0x00ff00), 60)
       console.log('clicked block', bc, ' chunk ', cc, ' intrachunk ',
                   chunk.getIntraChunkBlockCoords(bc[0], bc[1]));
@@ -107,16 +106,15 @@ class Game implements InputListener {
   // End InputListener interface implementation
 
   addEntity(entity:Entity) {
-    entity.id = ++this.lastEntityId;
-    this.entities[entity.id] = entity;
+    this.gameModel.addEntity(entity);
     if (entity.sprite) {
       this.scene.add(entity.sprite);
     }
   }
 
   removeEntity(entity:Entity) {
+    this.gameModel.removeEntity(entity);
     this.scene.remove(entity.sprite);
-    delete this.entities[entity.id];
   }
 
   addSpriteForTicks(sprite:THREE.Object3D, ticks:number = 1) {
@@ -165,18 +163,18 @@ class Game implements InputListener {
     var lc = this.localToBlock(entity.sprite.position.x,
                                entity.sprite.position.y);
     var height = lc[1] - 1;
-    while (!this.terrainGrid.has(lc[0], height)) {
+    while (!this.gameModel.terrainGrid.has(lc[0], height)) {
       if (height <= lc[1]-6) {
         return null;
       }
       height -= 1;
     }
-    return this.terrainGrid.get(lc[0], height);
+    return this.gameModel.terrainGrid.get(lc[0], height);
   }
 
   start() {
-    this.player = new Player(this);
-    this.addEntity(this.player);
+    this.gameModel.player = new Player(this);
+    this.addEntity(this.gameModel.player);
 
     var bgController = new BackgroundController(this.scene);
     bgController.drawBackground();
@@ -233,13 +231,13 @@ class Game implements InputListener {
     var bottomRightChunkCoords = Chunk.blockToChunk(bottomRight);
     for (var x = topLeftChunkCoords[0]; x <= bottomRightChunkCoords[0]; x++) {
       for (var y = topLeftChunkCoords[1]; y >= bottomRightChunkCoords[1]; y--) {
-        if (!this.terrainStore.activeChunks.has(x, y)) {
-          this.addChunk(this.terrainStore.getChunk(x, y));
+        if (!this.gameModel.terrainStore.activeChunks.has(x, y)) {
+          this.addChunk(this.gameModel.terrainStore.getChunk(x, y));
         }
       }
     }
 
-    this.terrainStore.activeChunks.forEach((x, y, chunk) => {
+    this.gameModel.terrainStore.activeChunks.forEach((x, y, chunk) => {
       if (x < topLeftChunkCoords[0] || x > bottomRightChunkCoords[0] ||
           y > topLeftChunkCoords[1] || y < bottomRightChunkCoords[1]) {
         this.removeChunk(chunk);
@@ -253,9 +251,9 @@ class Game implements InputListener {
   }
 
   addChunk(chunk:Chunk) {
-    this.terrainStore.activeChunks.set(chunk.chunkX, chunk.chunkY, chunk);
+    this.gameModel.terrainStore.activeChunks.set(chunk.chunkX, chunk.chunkY, chunk);
     chunk.forEach((x, y, ground) => {
-      this.terrainGrid.set(ground.x, ground.y, ground);
+      this.gameModel.terrainGrid.set(ground.x, ground.y, ground);
       this.addEntity(ground);
     });
     chunk.plants.forEach((plant) => {
@@ -271,9 +269,9 @@ class Game implements InputListener {
   }
 
   removeChunk(chunk:Chunk) {
-    this.terrainStore.activeChunks.clear(chunk.chunkX, chunk.chunkY);
+    this.gameModel.terrainStore.activeChunks.clear(chunk.chunkX, chunk.chunkY);
     chunk.forEach((x, y, ground) => {
-      this.terrainGrid.clear(ground.x, ground.y);
+      this.gameModel.terrainGrid.clear(ground.x, ground.y);
       this.removeEntity(ground);
     });
     chunk.plants.forEach((plant) => {
@@ -310,7 +308,7 @@ class Game implements InputListener {
     var blocks : number[][] = [];
     for (var x = nearestTopLeftBc[0]; x <= nearestBottomRightBc[0]; x++) {
       for (var y = nearestTopLeftBc[1]; y >= nearestBottomRightBc[1]; y--) {
-        if (this.terrainGrid.has(x, y)) {
+        if (this.gameModel.terrainGrid.has(x, y)) {
           blocks.push([x,y]);
         }
       }
@@ -331,8 +329,8 @@ class Game implements InputListener {
     if (this.hasRendered) {
       this.generateVisibleWorld();
     }
-    for (var id in this.entities) {
-      this.entities[id].tick();
+    for (var id in this.gameModel.entities) {
+      this.gameModel.entities[id].tick();
     }
     for (var i = 0; i < this.removeSprites.length; i++) {
       var remove = this.removeSprites[i];

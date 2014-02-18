@@ -39,10 +39,9 @@ class InputController {
   input = {
     jump: false, down: false, right: false, left: false, dig:false
   };
-  listeners : Array<InputListener>;
+  listeners : InputListener[] = [];
 
   constructor() {
-    this.listeners = new Array<InputListener>();
     window.addEventListener('keydown', this.handleKey.bind(this));
     window.addEventListener('keyup', this.handleKey.bind(this));
     window.addEventListener('mousedown', this.click.bind(this));

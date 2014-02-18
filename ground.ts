@@ -155,7 +155,7 @@ class Ground implements Entity{
 
   hit() {
     var self = this;
-    game.entities.forEach(function(entity: Entity) {
+    game.gameModel.entities.forEach(function(entity: Entity) {
       if (entity instanceof Plant) {
         return;
       }
@@ -166,8 +166,8 @@ class Ground implements Entity{
     });
 
     game.scene.remove(this.sprite);
-    game.terrainGrid.clear(this.x, this.y);
-    game.terrainStore.onRemoveBlock(this.x, this.y);
+    game.gameModel.terrainGrid.clear(this.x, this.y);
+    game.gameModel.terrainStore.onRemoveBlock(this.x, this.y);
   }
 
 }

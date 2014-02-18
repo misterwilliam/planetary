@@ -107,7 +107,7 @@ class Player implements Entity {
         if (this.speedX > 0) {  // Hit left side first.
           // Ignore collision with a side that has an adjacent block, since its
           // an "inside" edge.
-          if (!game.terrainGrid.has(bc[0] - 1, bc[1])) {
+          if (!game.gameModel.terrainGrid.has(bc[0] - 1, bc[1])) {
             pos.x = Math.min(pos.x, (lc[0] - HALF_BLOCK) - DUDE_WIDTH / 2);
             if (game.debug) {
               game.addSpriteForTicks(game.drawLine(
@@ -117,7 +117,7 @@ class Player implements Entity {
             }
           }
         } else {  // Hit right side first.
-          if (!game.terrainGrid.has(bc[0] + 1, bc[1])) {
+          if (!game.gameModel.terrainGrid.has(bc[0] + 1, bc[1])) {
             pos.x = Math.max(pos.x, (lc[0] + HALF_BLOCK) + DUDE_WIDTH / 2);
             if (game.debug) {
               game.addSpriteForTicks(game.drawLine(
@@ -129,7 +129,7 @@ class Player implements Entity {
         }
       } else {
         if (this.speedY > 0) {  // Hit bottom first.
-          if (!game.terrainGrid.has(bc[0], bc[1] - 1)) {
+          if (!game.gameModel.terrainGrid.has(bc[0], bc[1] - 1)) {
             pos.y = Math.min(pos.y, (lc[1] - HALF_BLOCK) + DUDE_HEIGHT / 2);
             if (game.debug) {
               game.addSpriteForTicks(game.drawLine(
@@ -139,7 +139,7 @@ class Player implements Entity {
             }
           }
         } else {  // Hit top first.
-          if (!game.terrainGrid.has(bc[0], bc[1] + 1)) {
+          if (!game.gameModel.terrainGrid.has(bc[0], bc[1] + 1)) {
             pos.y = Math.max(pos.y, (lc[1] + HALF_BLOCK) + DUDE_HEIGHT / 2);
             this.onGround = true;
             if (game.debug) {

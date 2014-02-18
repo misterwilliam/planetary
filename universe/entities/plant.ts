@@ -31,7 +31,7 @@ class Plant implements Entity {
     neighborCoords.forEach(function(coord) {
       var x = coord[0];
       var y = coord[1];
-      var ground = game.terrainGrid.get(x, y);
+      var ground = game.gameModel.terrainGrid.get(x, y);
       if (ground) {
         ground.water(20);
       }
