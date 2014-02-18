@@ -76,7 +76,6 @@ class Game implements InputListener {
   // Begin InputListener interface implementation
   handleKeyUp(event : KeyboardEvent) {
     var key = INPUT_MAP[event.which];
-    console.log(key);
     if (key == 'debug') {
       console.log("debug mode");
       this.toggleDebug();
