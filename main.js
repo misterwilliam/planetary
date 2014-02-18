@@ -592,14 +592,19 @@ var Player = (function () {
     Player.prototype.tick = function () {
         var _this = this;
         var mouse = game.inputController.mouse;
-        if (mouse.lc && Math.abs(mouse.lc.x - this.sprite.position.x) <= CLICK_RADIUS && Math.abs(mouse.lc.y - this.sprite.position.y) <= CLICK_RADIUS) {
-            if (game.inputController.mouse.click) {
-                var block = game.gameModel.terrainGrid.get(mouse.bc[0], mouse.bc[1]);
-                if (block) {
-                    block.hit();
+        if (mouse.bc) {
+            // Calculate radius from the center of the nearest block, not the true
+            // mouse coordinates, so that blocks are either fully selectable or not.
+            var lc = game.blockToLocal(mouse.bc[0], mouse.bc[1]);
+            if (Math.abs(lc[0] - this.sprite.position.x) <= CLICK_RADIUS && Math.abs(lc[1] - this.sprite.position.y) <= CLICK_RADIUS) {
+                if (mouse.click) {
+                    var block = game.gameModel.terrainGrid.get(mouse.bc[0], mouse.bc[1]);
+                    if (block) {
+                        block.hit();
+                    }
                 }
+                game.addSpriteForTicks(game.outlineBlock(mouse.bc[0], mouse.bc[1]), 1);
             }
-            game.addSpriteForTicks(game.outlineBlock(mouse.bc[0], mouse.bc[1]), 1);
         }
 
         if (game.inputController.input.right) {
