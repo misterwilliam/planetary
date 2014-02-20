@@ -115,11 +115,30 @@ var Boar = (function () {
         this.y = y;
         this.sprite = new THREE.Sprite(BOAR_MATERIAL);
         this.id = -1;
+        this.decisionTimer = 0;
         var lc = game.blockToLocal(x, y);
         this.sprite.position.set(lc[0], lc[1] + 15, -1);
         this.sprite.scale.set(4 * 32, 4 * 32, 1.0);
     }
     Boar.prototype.tick = function () {
+        if (this.decisionTimer == 0) {
+            if (Math.random() > 0.5) {
+                this.state = "left";
+            } else {
+                this.state = "right";
+            }
+        }
+
+        if (this.state == "left") {
+            this.sprite.position.x -= 10;
+        } else {
+            this.sprite.position.x += 10;
+        }
+
+        this.decisionTimer++;
+        if (this.decisionTimer == 30) {
+            this.decisionTimer = 0;
+        }
     };
     return Boar;
 })();
