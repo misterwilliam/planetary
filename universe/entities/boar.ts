@@ -3,6 +3,8 @@ var BOAR_MATERIAL = LoadJaggyMaterial('images/boar.png');
 class Boar implements Entity {
   sprite = new THREE.Sprite(BOAR_MATERIAL);
   id = -1;
+  state : string;
+  decisionTimer = 0;
 
   constructor(public x:number, public y:number) {
     var lc = game.blockToLocal(x, y);
@@ -11,6 +13,24 @@ class Boar implements Entity {
   }
 
   tick() {
+    if (this.decisionTimer == 0) {
+      if (Math.random() > 0.5) {
+        this.state = "left";
+      } else {
+        this.state = "right";
+      }
+    }
+
+    if (this.state == "left") {
+      this.sprite.position.x -= 10;
+    } else {
+      this.sprite.position.x += 10;
+    }
+
+    this.decisionTimer++;
+    if (this.decisionTimer == 30) {
+      this.decisionTimer = 0;
+    }
   }
 
 }
