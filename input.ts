@@ -24,7 +24,7 @@ var INPUT_MAP = {
   83:  'down',  // s
   68:  'right', // d
   65:  'left',  // a
-  32:  'dig',   // space
+  32:  'jump',   // space
   192: 'debug', // ~
 };
 
