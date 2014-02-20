@@ -64,20 +64,27 @@ var CreatureSpawner = (function () {
     CreatureSpawner.prototype.spawnCreatures = function (x, y) {
         var random_number = Math.random();
         if (random_number > 0.95) {
-            this.spawnABoar(x);
+            this.spawnSomething(x);
         }
     };
 
-    // Spawn up to 10 boars randomly position centered around x.
-    CreatureSpawner.prototype.spawnABoar = function (x) {
+    // Spawn up to 10 creatures randomly position centered around x.
+    CreatureSpawner.prototype.spawnSomething = function (x) {
         var random_x_offset = Math.floor((Math.random() * 60) - 30);
-        var boar = new Boar(random_x_offset + x, 2);
-        this.game.addEntity(boar);
+        var random_y_offset = Math.floor((Math.random() * 20) - 10);
+        var rand = Math.random();
+        var entity;
+        if (rand > 0.5) {
+            entity = new Sandworm(random_x_offset + x, 15 + random_y_offset);
+        } else {
+            entity = new Boar(random_x_offset + x, 2);
+        }
+        this.game.addEntity(entity);
 
         if (typeof this.creatureArray[this.i] != 'undefined') {
             this.game.removeEntity(this.creatureArray[this.i]);
         }
-        this.creatureArray[this.i] = boar;
+        this.creatureArray[this.i] = entity;
 
         this.i++;
         if (this.i > 10) {
@@ -130,9 +137,9 @@ var Boar = (function () {
         }
 
         if (this.state == "left") {
-            this.sprite.position.x -= 10;
+            this.sprite.position.x -= 5;
         } else {
-            this.sprite.position.x += 10;
+            this.sprite.position.x += 5;
         }
 
         this.decisionTimer++;
@@ -190,6 +197,41 @@ var Plant = (function () {
         }
     };
     return Plant;
+})();
+var SANDWORM_MATERIAL = LoadJaggyMaterial('images/sand-worm.png');
+
+var Sandworm = (function () {
+    function Sandworm(x, y) {
+        this.x = x;
+        this.y = y;
+        this.sprite = new THREE.Sprite(SANDWORM_MATERIAL);
+        this.id = -1;
+        this.decisionTimer = 0;
+        var lc = game.blockToLocal(x, y);
+        this.sprite.position.set(lc[0], lc[1] + 15, -1);
+        this.sprite.scale.set(4 * 64, 4 * 32, 1.0);
+    }
+    Sandworm.prototype.tick = function () {
+        if (this.decisionTimer == 0) {
+            if (Math.random() > 0.5) {
+                this.state = "left";
+            } else {
+                this.state = "right";
+            }
+        }
+
+        if (this.state == "left") {
+            this.sprite.position.x -= 1;
+        } else {
+            this.sprite.position.x += 1;
+        }
+
+        this.decisionTimer++;
+        if (this.decisionTimer == 120) {
+            this.decisionTimer = 0;
+        }
+    };
+    return Sandworm;
 })();
 var SUPER_WEED_MATERIAL = LoadJaggyMaterial('images/super-weed.png');
 var GROW_CYCLE = 50;
@@ -519,7 +561,7 @@ var INPUT_MAP = {
     83: 'down',
     68: 'right',
     65: 'left',
-    32: 'dig',
+    32: 'jump',
     192: 'debug'
 };
 
@@ -811,6 +853,7 @@ var BackgroundController = (function () {
 /// <reference path='universe/entities/air-generator.ts'/>
 /// <reference path='universe/entities/boar.ts'/>
 /// <reference path='universe/entities/plant.ts'/>
+/// <reference path='universe/entities/sandworm.ts'/>
 /// <reference path='universe/entities/super-weed.ts'/>
 /// <reference path='universe/entities/tree.ts'/>
 /// <reference path='consts.ts'/>
