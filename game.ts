@@ -7,6 +7,7 @@
 /// <reference path='universe/entities/air-generator.ts'/>
 /// <reference path='universe/entities/boar.ts'/>
 /// <reference path='universe/entities/plant.ts'/>
+/// <reference path='universe/entities/sandworm.ts'/>
 /// <reference path='universe/entities/super-weed.ts'/>
 /// <reference path='universe/entities/tree.ts'/>
 
