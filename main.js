@@ -52,6 +52,40 @@ var Grid = (function () {
     };
     return Grid;
 })();
+var CreatureSpawner = (function () {
+    function CreatureSpawner(game) {
+        this.creatureArray = new Array();
+        this.i = 0;
+        this.game = game;
+    }
+    // Spawn creatures off screen given the x and y coordinates of the camera (in
+    // block coordinates). This is admittedly a suboptimal interface and could be
+    // improved.
+    CreatureSpawner.prototype.spawnCreatures = function (x, y) {
+        var random_number = Math.random();
+        if (random_number > 0.95) {
+            this.spawnABoar(x);
+        }
+    };
+
+    // Spawn up to 10 boars randomly position centered around x.
+    CreatureSpawner.prototype.spawnABoar = function (x) {
+        var random_x_offset = Math.floor((Math.random() * 60) - 30);
+        var boar = new Boar(random_x_offset + x, 2);
+        this.game.addEntity(boar);
+
+        if (typeof this.creatureArray[this.i] != 'undefined') {
+            this.game.removeEntity(this.creatureArray[this.i]);
+        }
+        this.creatureArray[this.i] = boar;
+
+        this.i++;
+        if (this.i > 10) {
+            this.i = 0;
+        }
+    };
+    return CreatureSpawner;
+})();
 var AIR_GENERATOR_MATERIAL = LoadJaggyMaterial('images/air-maker.png');
 
 var AirGenerator = (function () {
@@ -754,6 +788,7 @@ var BackgroundController = (function () {
 /// <reference path='lib/seedrandom.d.ts'/>
 /// <reference path='engine/entity.ts'/>
 /// <reference path='engine/grid.ts'/>
+/// <reference path='universe/spawner.ts'/>
 /// <reference path='universe/entities/air-generator.ts'/>
 /// <reference path='universe/entities/boar.ts'/>
 /// <reference path='universe/entities/plant.ts'/>
@@ -793,6 +828,7 @@ var Game = (function () {
         this.renderer = new THREE.WebGLRenderer();
         this.projector = new THREE.Projector();
         this.gameModel = new GameModel();
+        this.creatureSpawner = new CreatureSpawner(this);
         this.now = getNow();
         this.lastTime = getNow();
         this.unprocessedFrames = 0;
@@ -922,8 +958,8 @@ var Game = (function () {
         var airGenerator = new AirGenerator(5, 7);
         this.addEntity(airGenerator);
 
-        var boar = new Boar(-5, 2);
-        this.addEntity(boar);
+        var camera_block_position = this.localToBlock(this.camera.position.x, this.camera.position.y);
+        this.creatureSpawner.spawnCreatures(camera_block_position[0], camera_block_position[1]);
 
         var superWeed = new SuperWeed(15, 0);
         this.addEntity(superWeed);
@@ -1092,6 +1128,9 @@ var Game = (function () {
             this.camera.position.y += y;
         }
         this.generateVisibleWorld();
+
+        var camera_block_position = this.localToBlock(this.camera.position.x, this.camera.position.y);
+        this.creatureSpawner.spawnCreatures(camera_block_position[0], camera_block_position[1]);
     };
 
     Game.prototype.toggleDebug = function () {
