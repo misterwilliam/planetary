@@ -22,9 +22,9 @@ class Boar implements Entity {
     }
 
     if (this.state == "left") {
-      this.sprite.position.x -= 10;
+      this.sprite.position.x -= 5;
     } else {
-      this.sprite.position.x += 10;
+      this.sprite.position.x += 5;
     }
 
     this.decisionTimer++;
