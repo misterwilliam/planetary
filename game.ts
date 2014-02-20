@@ -3,6 +3,7 @@
 
 /// <reference path='engine/entity.ts'/>
 /// <reference path='engine/grid.ts'/>
+/// <reference path='universe/spawner.ts'/>
 /// <reference path='universe/entities/air-generator.ts'/>
 /// <reference path='universe/entities/boar.ts'/>
 /// <reference path='universe/entities/plant.ts'/>
@@ -42,6 +43,8 @@ class Game implements InputListener {
 
   gameModel = new GameModel();
   inputController : InputController;  // Set in constructor
+
+  creatureSpawner = new CreatureSpawner(this);
 
   now = getNow();
   lastTime = getNow();
@@ -181,8 +184,10 @@ class Game implements InputListener {
     var airGenerator = new AirGenerator(5, 7);
     this.addEntity(airGenerator);
 
-    var boar = new Boar(-5, 2);
-    this.addEntity(boar);
+    var camera_block_position = this.localToBlock(this.camera.position.x,
+        this.camera.position.y);
+    this.creatureSpawner.spawnCreatures(camera_block_position[0],
+        camera_block_position[1]);
 
     var superWeed = new SuperWeed(15, 0);
     this.addEntity(superWeed);
@@ -352,6 +357,11 @@ class Game implements InputListener {
       this.camera.position.y += y;
     }
     this.generateVisibleWorld();
+    
+    var camera_block_position = this.localToBlock(this.camera.position.x,
+        this.camera.position.y);
+    this.creatureSpawner.spawnCreatures(camera_block_position[0],
+        camera_block_position[1]);
   }
 
   toggleDebug() {
