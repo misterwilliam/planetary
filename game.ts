@@ -35,10 +35,15 @@ function LoadJaggyMaterial(url:string) {
   texture.magFilter = texture.minFilter = THREE.NearestFilter;
   return new THREE.SpriteMaterial({map: texture});
 };
-
+var zoom = 3;
 class Game implements InputListener {
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(90, null, 0.1, 1000);
+  
+  camera = new THREE.OrthographicCamera(zoom * 0.5 * -window.innerWidth,
+    zoom * 0.5 * window.innerWidth,
+    zoom * 0.5 * window.innerHeight,
+    zoom * 0.5 * -window.innerHeight, 0.1, 1000);
+
   renderer = new THREE.WebGLRenderer();
   projector = new THREE.Projector();
 
@@ -67,7 +72,10 @@ class Game implements InputListener {
   }
 
   resize() {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.left = zoom * 0.5 * -window.innerWidth;
+    this.camera.right = zoom * 0.5 * window.innerWidth;
+    this.camera.top = zoom * 0.5 * window.innerHeight;
+    this.camera.bottom = zoom * 0.5 * -window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.cameraDeadzone = new THREE.Vector2(
