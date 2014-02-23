@@ -2,6 +2,7 @@
 /// <reference path='lib/seedrandom.d.ts'/>
 
 /// <reference path='engine/entity.ts'/>
+/// <reference path='engine/game2d.ts'/>
 /// <reference path='engine/grid.ts'/>
 /// <reference path='universe/spawner.ts'/>
 /// <reference path='universe/entities/air-generator.ts'/>
@@ -19,15 +20,6 @@
 /// <reference path='player.ts'/>
 /// <reference path='background.ts'/>
 
-var getNow = (function() {
-  if (window.performance && window.performance.now) {
-    return window.performance.now.bind(window.performance);
-  }
-  return function(){return +new Date()};
-})();
-
-var tickCount = 0;
-
 // Creates a new SpriteMaterial with nearest-neighbor texture filtering from
 // image URL.
 function LoadJaggyMaterial(url:string) {
@@ -35,26 +27,11 @@ function LoadJaggyMaterial(url:string) {
   texture.magFilter = texture.minFilter = THREE.NearestFilter;
   return new THREE.SpriteMaterial({map: texture});
 };
-var zoom = 3;
-class Game implements InputListener {
-  scene = new THREE.Scene();
-  
-  camera = new THREE.OrthographicCamera(zoom * 0.5 * -window.innerWidth,
-    zoom * 0.5 * window.innerWidth,
-    zoom * 0.5 * window.innerHeight,
-    zoom * 0.5 * -window.innerHeight, 0.1, 1000);
 
-  renderer = new THREE.WebGLRenderer();
-  projector = new THREE.Projector();
-
+class Game extends Platformer2D implements InputListener {
   gameModel = new GameModel();
   inputController : InputController;  // Set in constructor
-
   creatureSpawner = new CreatureSpawner(this);
-
-  now = getNow();
-  lastTime = getNow();
-  unprocessedFrames = 0;
 
   debug = false;
   groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
@@ -65,25 +42,58 @@ class Game implements InputListener {
   cameraDeadzone = new THREE.Vector2(1000, 1000);
 
   constructor(inputController : InputController) {
+    super();
     this.inputController = inputController;
-    this.camera.position.set(0, 0, 800);
-    this.resize();
-    document.body.appendChild(this.renderer.domElement);
   }
 
-  resize() {
-    this.camera.left = zoom * 0.5 * -window.innerWidth;
-    this.camera.right = zoom * 0.5 * window.innerWidth;
-    this.camera.top = zoom * 0.5 * window.innerHeight;
-    this.camera.bottom = zoom * 0.5 * -window.innerHeight;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+  // Begin Platformer2D implementation
+  handleStart() {
+    this.gameModel.player = new Player(this);
+    this.addEntity(this.gameModel.player);
+
+    var bgController = new BackgroundController(this.scene);
+    bgController.drawBackground();
+
+    var airGenerator = new AirGenerator(5, 7);
+    this.addEntity(airGenerator);
+
+    var camera_block_position = this.localToBlock(this.camera.position.x,
+        this.camera.position.y);
+    this.creatureSpawner.spawnCreatures(camera_block_position[0],
+        camera_block_position[1]);
+
+    var superWeed = new SuperWeed(15, 0);
+    this.addEntity(superWeed);
+  }
+
+  // Single tick of game time (1 frame)
+  handleTick() {
+    if (this.hasRendered) {
+      this.generateVisibleWorld();
+    }
+    for (var id in this.gameModel.entities) {
+      this.gameModel.entities[id].tick();
+    }
+    for (var i = 0; i < this.removeSprites.length; i++) {
+      var remove = this.removeSprites[i];
+      if (remove.ticks-- == 0) {
+        this.scene.remove(remove.sprite);
+        this.removeSprites.splice(i--, 1);
+      }
+    }
+    if (this.debug && this.tickCount % 600 == 10) {
+      console.log(this.scene.children.length, " objects in scene");
+    }
+  }
+
+  handleResize() {
     this.cameraDeadzone = new THREE.Vector2(
         window.innerWidth / 5, window.innerHeight / 5);
-    if (tickCount != 0) {
+    if (this.tickCount != 0) {
       this.generateVisibleWorld();
     }
   }
+  // End Platformer2D implementation
 
   // Begin InputListener interface implementation
   handleKeyUp(event : KeyboardEvent) {
@@ -181,51 +191,6 @@ class Game implements InputListener {
       height -= 1;
     }
     return this.gameModel.terrainGrid.get(lc[0], height);
-  }
-
-  start() {
-    this.gameModel.player = new Player(this);
-    this.addEntity(this.gameModel.player);
-
-    var bgController = new BackgroundController(this.scene);
-    bgController.drawBackground();
-
-    var airGenerator = new AirGenerator(5, 7);
-    this.addEntity(airGenerator);
-
-    var camera_block_position = this.localToBlock(this.camera.position.x,
-        this.camera.position.y);
-    this.creatureSpawner.spawnCreatures(camera_block_position[0],
-        camera_block_position[1]);
-
-    var superWeed = new SuperWeed(15, 0);
-    this.addEntity(superWeed);
-
-    window.addEventListener('resize', this.resize.bind(this));
-
-    this.animate();
-  }
-
-  // Called when when we are allowed to render. In general at 60 fps.
-  animate() {
-    this.now = getNow();
-    this.unprocessedFrames += (this.now - this.lastTime) * 60.0 / 1000.0; // 60 fps
-    this.lastTime = this.now;
-    if (this.unprocessedFrames > MAX_CATCHUP) {
-      this.unprocessedFrames = MAX_CATCHUP;
-    }
-    while (this.unprocessedFrames >= 1.0) {
-      this.tick();
-      this.unprocessedFrames -= 1.0;
-    }
-    this.render();
-    requestAnimationFrame(this.animate.bind(this));
-  }
-
-  // Renders a single frame
-  render() {
-    this.hasRendered = true;
-    this.renderer.render(this.scene, this.camera);
   }
 
   generateVisibleWorld() {
@@ -335,27 +300,6 @@ class Game implements InputListener {
       return false;
     }
     return entity.sprite.position.y - (ground.sprite.position.y + MAGIC_NUMBER) < 1;
-  }
-
-  // Single tick of game time (1 frame)
-  tick() {
-    if (this.hasRendered) {
-      this.generateVisibleWorld();
-    }
-    for (var id in this.gameModel.entities) {
-      this.gameModel.entities[id].tick();
-    }
-    for (var i = 0; i < this.removeSprites.length; i++) {
-      var remove = this.removeSprites[i];
-      if (remove.ticks-- == 0) {
-        this.scene.remove(remove.sprite);
-        this.removeSprites.splice(i--, 1);
-      }
-    }
-    if (this.debug && tickCount % 600 == 10) {
-      console.log(this.scene.children.length, " objects in scene");
-    }
-    tickCount++;
   }
 
   panCamera(x?:number, y?:number) {
