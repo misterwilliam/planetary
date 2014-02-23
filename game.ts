@@ -37,7 +37,6 @@ class Game extends Platformer2D implements InputListener {
   groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
   atmosphereController = new AtmosphereController(this.scene);
   debugSprites : THREE.Object3D[];
-  hasRendered = false;
   removeSprites : {ticks:number; sprite:THREE.Object3D}[] = [];
   cameraDeadzone = new THREE.Vector2(1000, 1000);
 
