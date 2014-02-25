@@ -1,3 +1,82 @@
+// Creates a generic full screen WebGL app with othrographic camera and
+// animation loop. Automatically handles window resizes so that view is
+// always fullscreen. Clients should extend Platformer2D and implement
+// Platformer2DProtocol.
+
+var getNow = (function () {
+    if (window.performance && window.performance.now) {
+        return window.performance.now.bind(window.performance);
+    }
+    return function () {
+        return +new Date();
+    };
+})();
+
+var Platformer2D = (function () {
+    function Platformer2D() {
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.OrthographicCamera(Platformer2D.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerWidth, Platformer2D.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerWidth, Platformer2D.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerHeight, Platformer2D.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerHeight, 0.1, 1000);
+        this.renderer = new THREE.WebGLRenderer();
+        this.projector = new THREE.Projector();
+        this.hasRendered = false;
+        this.tickCount = 0;
+        this.now = getNow();
+        this.lastTime = getNow();
+        this.unprocessedFrames = 0;
+        this.camera.position.set(0, 0, 800);
+        this.resize();
+    }
+    // Begin implement Platformer2DProtocol
+    Platformer2D.prototype.start = function () {
+        window.addEventListener('resize', this.resize.bind(this));
+        document.body.appendChild(this.renderer.domElement);
+        this.handleStart();
+        this.animate();
+    };
+    Platformer2D.prototype.handleStart = function () {
+    };
+    Platformer2D.prototype.handleResize = function () {
+    };
+    Platformer2D.prototype.handleTick = function () {
+    };
+
+    // End implement Platformer2DProtocol
+    Platformer2D.prototype.resize = function () {
+        this.camera.left = Platformer2D.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerWidth;
+        this.camera.right = Platformer2D.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerWidth;
+        this.camera.top = Platformer2D.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerHeight;
+        this.camera.bottom = Platformer2D.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.handleResize();
+    };
+
+    // Called when when we are allowed to render. In general at 60 fps.
+    Platformer2D.prototype.animate = function () {
+        this.now = getNow();
+        this.unprocessedFrames += (this.now - this.lastTime) * 60.0 / 1000.0; // 60 fps
+        this.lastTime = this.now;
+        if (this.unprocessedFrames > Platformer2D.MAX_CATCHUP) {
+            this.unprocessedFrames = Platformer2D.MAX_CATCHUP;
+        }
+        while (this.unprocessedFrames >= 1.0) {
+            this.handleTick();
+            this.tickCount++;
+            this.unprocessedFrames -= 1.0;
+        }
+        this.render();
+        requestAnimationFrame(this.animate.bind(this));
+    };
+
+    // Renders a single frame
+    Platformer2D.prototype.render = function () {
+        this.hasRendered = true;
+        this.renderer.render(this.scene, this.camera);
+    };
+    Platformer2D.DEFAULT_ZOOM_FACTOR = 3;
+    Platformer2D.MAX_CATCHUP = 10;
+    return Platformer2D;
+})();
 var Grid = (function () {
     function Grid() {
         this._grid = {};
@@ -329,7 +408,6 @@ var Tree = (function () {
 var PLAYER_MAX_SPEED = 8;
 var PLAYER_ACCELERATION = 0.001;
 var JUMP_HEIGHT = 10;
-var MAX_CATCHUP = 10;
 var BLOCK_SIZE = 32;
 var HALF_BLOCK = BLOCK_SIZE / 2;
 var CHUNK_SIZE = 16;
@@ -683,9 +761,9 @@ var Player = (function () {
         this.sprite.scale.set(DUDE_WIDTH, DUDE_HEIGHT, 1.0);
         this.flashSprite.scale.set(DUDE_WIDTH, DUDE_HEIGHT, 1.0);
         this.teleport(0, 10);
+        this.collisionDetector = new BlockCollisionDetector(game.gameModel.terrainGrid);
     }
     Player.prototype.tick = function () {
-        var _this = this;
         var mouse = game.inputController.mouse;
         if (mouse.bc) {
             // Calculate radius from the center of the nearest block, not the true
@@ -741,74 +819,33 @@ var Player = (function () {
 
         this.onGround = false;
         var bounding = game.boundingBox(this.sprite);
-        var collisions = this.game.blockCollisions(bounding[0], bounding[1]);
-        collisions.forEach(function (bc) {
+        var collisions = this.collisionDetector.collide(bounding[0], bounding[1], new THREE.Vector2(this.speedX, this.speedY));
+        for (var i = 0; i < collisions.length; i++) {
+            var collision = collisions[i];
+            var line = collision.line();
+            switch (collision.side) {
+                case 0 /* LEFT */:
+                    pos.x = Math.min(pos.x, line - DUDE_WIDTH / 2);
+                    break;
+                case 1 /* RIGHT */:
+                    pos.x = Math.max(pos.x, line + DUDE_WIDTH / 2);
+                    break;
+                case 2 /* TOP */:
+                    pos.y = Math.max(pos.y, line + DUDE_HEIGHT / 2);
+                    this.onGround = true;
+                    break;
+                case 3 /* BOTTOM */:
+                    pos.y = Math.min(pos.y, line - DUDE_HEIGHT / 2);
+                    this.jumpTicks = 0;
+                    break;
+            }
+
             if (game.debug) {
-                game.addSpriteForTicks(game.outlineBlock(bc[0], bc[1], 0xffff00));
+                game.addSpriteForTicks(game.outlineBlock(collision.bc[0], collision.bc[1], 0xffff00));
+                var segment = collision.segment();
+                game.addSpriteForTicks(game.drawLine(segment[0], segment[1], 0xff0000), 3);
             }
-            var lc = game.blockToLocal(bc[0], bc[1]);
-
-            // To know how to react to this collision, we need to figure out which of
-            // its 4 sides we would have hit first, given our previous position.
-            //
-            // We can eliminate 1 side from each axis using our direction. E.g. we
-            // couldn't have hit the bottom if we're moving down, or the left if
-            // we're moving left.
-            //
-            // Then we decide which of the 2 remaining sides we hit first by comparing
-            // block penetration time on each axis.
-            var timeX = Infinity;
-            if (_this.speedX > 0) {
-                timeX = (bounding[1][0] - (lc[0] - HALF_BLOCK)) / _this.speedX;
-            } else if (_this.speedX < 0) {
-                timeX = ((lc[0] + HALF_BLOCK) - bounding[0][0]) / -_this.speedX;
-            }
-
-            var timeY = Infinity;
-            if (_this.speedY > 0) {
-                timeY = (bounding[0][1] - (lc[1] - HALF_BLOCK)) / _this.speedY;
-            } else if (_this.speedY < 0) {
-                timeY = ((lc[1] + HALF_BLOCK) - bounding[1][1]) / -_this.speedY;
-            }
-
-            if (timeX < timeY) {
-                if (_this.speedX > 0) {
-                    // Ignore collision with a side that has an adjacent block, since its
-                    // an "inside" edge.
-                    if (!game.gameModel.terrainGrid.has(bc[0] - 1, bc[1])) {
-                        pos.x = Math.min(pos.x, (lc[0] - HALF_BLOCK) - DUDE_WIDTH / 2);
-                        if (game.debug) {
-                            game.addSpriteForTicks(game.drawLine([lc[0] - HALF_BLOCK, lc[1] + HALF_BLOCK], [lc[0] - HALF_BLOCK, lc[1] - HALF_BLOCK], 0xff0000), 3);
-                        }
-                    }
-                } else {
-                    if (!game.gameModel.terrainGrid.has(bc[0] + 1, bc[1])) {
-                        pos.x = Math.max(pos.x, (lc[0] + HALF_BLOCK) + DUDE_WIDTH / 2);
-                        if (game.debug) {
-                            game.addSpriteForTicks(game.drawLine([lc[0] + HALF_BLOCK, lc[1] + HALF_BLOCK], [lc[0] + HALF_BLOCK, lc[1] - HALF_BLOCK], 0xff0000), 3);
-                        }
-                    }
-                }
-            } else {
-                if (_this.speedY > 0) {
-                    if (!game.gameModel.terrainGrid.has(bc[0], bc[1] - 1)) {
-                        pos.y = Math.min(pos.y, (lc[1] - HALF_BLOCK) - DUDE_HEIGHT / 2);
-                        _this.jumpTicks = 0;
-                        if (game.debug) {
-                            game.addSpriteForTicks(game.drawLine([lc[0] + HALF_BLOCK, lc[1] - HALF_BLOCK], [lc[0] - HALF_BLOCK, lc[1] - HALF_BLOCK], 0xff0000), 3);
-                        }
-                    }
-                } else {
-                    if (!game.gameModel.terrainGrid.has(bc[0], bc[1] + 1)) {
-                        pos.y = Math.max(pos.y, (lc[1] + HALF_BLOCK) + DUDE_HEIGHT / 2);
-                        _this.onGround = true;
-                        if (game.debug) {
-                            game.addSpriteForTicks(game.drawLine([lc[0] + HALF_BLOCK, lc[1] + HALF_BLOCK], [lc[0] - HALF_BLOCK, lc[1] + HALF_BLOCK], 0xff0000), 3);
-                        }
-                    }
-                }
-            }
-        });
+        }
 
         if (game.hasRendered) {
             var cameraOffset = this.sprite.position.clone().sub(game.camera.position);
@@ -845,9 +882,153 @@ var BackgroundController = (function () {
     };
     return BackgroundController;
 })();
+var BlockCollisionDetector = (function () {
+    function BlockCollisionDetector(grid) {
+        this.grid = grid;
+    }
+    BlockCollisionDetector.prototype.collide = function (topLeftLC, bottomRightLC, velocity) {
+        // In the first phase, we find the set of solid blocks which are fully or
+        // partially inside the given rectangle. Blocks touching but outside are not
+        // considered collisions, hence the rounding "in".
+        var blocks = [];
+        var topLeftBC = [
+            Math.round(topLeftLC[0] / BLOCK_SIZE),
+            Math.ceil((topLeftLC[1] / BLOCK_SIZE) - 0.5)
+        ];
+        var bottomRightBC = [
+            Math.ceil((bottomRightLC[0] / BLOCK_SIZE) - 0.5),
+            Math.round(bottomRightLC[1] / BLOCK_SIZE)
+        ];
+        for (var x = topLeftBC[0]; x <= bottomRightBC[0]; x++) {
+            for (var y = topLeftBC[1]; y >= bottomRightBC[1]; y--) {
+                if (this.grid.has(x, y)) {
+                    blocks.push([x, y]);
+                }
+            }
+        }
+
+        // To know how to react to each collision, we need to figure out which of
+        // its 4 sides we would have hit first, given our velocity.
+        //
+        // We can eliminate 1 side from each axis using our direction. E.g. we
+        // couldn't have hit the bottom if we're moving down, or the left if we're
+        // moving left.
+        //
+        // Then we decide which of the 2 remaining sides we hit first by comparing
+        // block penetration time on each axis.
+        var collisions = [];
+        for (var i = 0; i < blocks.length; i++) {
+            var bc = blocks[i];
+            var lc = game.blockToLocal(bc[0], bc[1]);
+
+            var timeX = Infinity;
+            if (velocity.x > 0) {
+                timeX = (bottomRightLC[0] - (lc[0] - HALF_BLOCK)) / velocity.x;
+            } else if (velocity.x < 0) {
+                timeX = ((lc[0] + HALF_BLOCK) - topLeftLC[0]) / -velocity.x;
+            }
+
+            var timeY = Infinity;
+            if (velocity.y > 0) {
+                timeY = (topLeftLC[1] - (lc[1] - HALF_BLOCK)) / velocity.y;
+            } else if (velocity.y < 0) {
+                timeY = ((lc[1] + HALF_BLOCK) - bottomRightLC[1]) / -velocity.y;
+            }
+
+            var side = null;
+            if (timeX < timeY) {
+                if (velocity.x > 0) {
+                    // Ignore collision with a side that has an adjacent block, since it's
+                    // an "inside" edge.
+                    if (!this.grid.has(bc[0] - 1, bc[1])) {
+                        side = 0 /* LEFT */;
+                    }
+                } else {
+                    if (!this.grid.has(bc[0] + 1, bc[1])) {
+                        side = 1 /* RIGHT */;
+                    }
+                }
+            } else {
+                if (velocity.y > 0) {
+                    if (!this.grid.has(bc[0], bc[1] - 1)) {
+                        side = 3 /* BOTTOM */;
+                    }
+                } else {
+                    if (!this.grid.has(bc[0], bc[1] + 1)) {
+                        side = 2 /* TOP */;
+                    }
+                }
+            }
+
+            if (side !== null) {
+                collisions.push(new BlockCollision(bc, side));
+            }
+        }
+
+        return collisions;
+    };
+    return BlockCollisionDetector;
+})();
+
+var BlockSide;
+(function (BlockSide) {
+    BlockSide[BlockSide["LEFT"] = 0] = "LEFT";
+    BlockSide[BlockSide["RIGHT"] = 1] = "RIGHT";
+    BlockSide[BlockSide["TOP"] = 2] = "TOP";
+    BlockSide[BlockSide["BOTTOM"] = 3] = "BOTTOM";
+})(BlockSide || (BlockSide = {}));
+
+var BlockCollision = (function () {
+    function BlockCollision(bc, side) {
+        this.bc = bc;
+        this.side = side;
+    }
+    // Returns the X (LEFT, RIGHT) or Y (TOP, BOTTOM) GL coordinate of the edge
+    // that was hit.
+    BlockCollision.prototype.line = function () {
+        switch (this.side) {
+            case 0 /* LEFT */:
+                return this.bc[0] * BLOCK_SIZE - HALF_BLOCK;
+            case 1 /* RIGHT */:
+                return this.bc[0] * BLOCK_SIZE + HALF_BLOCK;
+            case 2 /* TOP */:
+                return this.bc[1] * BLOCK_SIZE + HALF_BLOCK;
+            case 3 /* BOTTOM */:
+                return this.bc[1] * BLOCK_SIZE - HALF_BLOCK;
+        }
+    };
+
+    // Returns the line segment of the edge that was hit in GL coordinates.
+    BlockCollision.prototype.segment = function () {
+        switch (this.side) {
+            case 0 /* LEFT */:
+                return [
+                    [this.line(), this.bc[1] * BLOCK_SIZE + HALF_BLOCK],
+                    [this.line(), this.bc[1] * BLOCK_SIZE - HALF_BLOCK]
+                ];
+            case 1 /* RIGHT */:
+                return [
+                    [this.line(), this.bc[1] * BLOCK_SIZE + HALF_BLOCK],
+                    [this.line(), this.bc[1] * BLOCK_SIZE - HALF_BLOCK]
+                ];
+            case 2 /* TOP */:
+                return [
+                    [this.bc[0] * BLOCK_SIZE + HALF_BLOCK, this.line()],
+                    [this.bc[0] * BLOCK_SIZE - HALF_BLOCK, this.line()]
+                ];
+            case 3 /* BOTTOM */:
+                return [
+                    [this.bc[0] * BLOCK_SIZE + HALF_BLOCK, this.line()],
+                    [this.bc[0] * BLOCK_SIZE - HALF_BLOCK, this.line()]
+                ];
+        }
+    };
+    return BlockCollision;
+})();
 /// <reference path='lib/three.d.ts'/>
 /// <reference path='lib/seedrandom.d.ts'/>
 /// <reference path='engine/entity.ts'/>
+/// <reference path='engine/game2d.ts'/>
 /// <reference path='engine/grid.ts'/>
 /// <reference path='universe/spawner.ts'/>
 /// <reference path='universe/entities/air-generator.ts'/>
@@ -863,17 +1044,7 @@ var BackgroundController = (function () {
 /// <reference path='atmosphere.ts'/>
 /// <reference path='player.ts'/>
 /// <reference path='background.ts'/>
-var getNow = (function () {
-    if (window.performance && window.performance.now) {
-        return window.performance.now.bind(window.performance);
-    }
-    return function () {
-        return +new Date();
-    };
-})();
-
-var tickCount = 0;
-
+/// <reference path='collision.ts'/>
 // Creates a new SpriteMaterial with nearest-neighbor texture filtering from
 // image URL.
 function LoadJaggyMaterial(url) {
@@ -883,38 +1054,65 @@ function LoadJaggyMaterial(url) {
 }
 ;
 
-var Game = (function () {
+var Game = (function (_super) {
+    __extends(Game, _super);
     function Game(inputController) {
-        this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera(90, null, 0.1, 1000);
-        this.renderer = new THREE.WebGLRenderer();
-        this.projector = new THREE.Projector();
+        _super.call(this);
         this.gameModel = new GameModel();
         this.creatureSpawner = new CreatureSpawner(this);
-        this.now = getNow();
-        this.lastTime = getNow();
-        this.unprocessedFrames = 0;
         this.debug = false;
         this.groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
         this.atmosphereController = new AtmosphereController(this.scene);
-        this.hasRendered = false;
         this.removeSprites = [];
         this.cameraDeadzone = new THREE.Vector2(1000, 1000);
         this.inputController = inputController;
-        this.camera.position.set(0, 0, 800);
-        this.resize();
-        document.body.appendChild(this.renderer.domElement);
     }
-    Game.prototype.resize = function () {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
-        this.camera.updateProjectionMatrix();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+    // Begin Platformer2D implementation
+    Game.prototype.handleStart = function () {
+        this.gameModel.player = new Player(this);
+        this.addEntity(this.gameModel.player);
+
+        var bgController = new BackgroundController(this.scene);
+        bgController.drawBackground();
+
+        var airGenerator = new AirGenerator(5, 7);
+        this.addEntity(airGenerator);
+
+        var camera_block_position = this.localToBlock(this.camera.position.x, this.camera.position.y);
+        this.creatureSpawner.spawnCreatures(camera_block_position[0], camera_block_position[1]);
+
+        var superWeed = new SuperWeed(15, 0);
+        this.addEntity(superWeed);
+    };
+
+    // Single tick of game time (1 frame)
+    Game.prototype.handleTick = function () {
+        if (this.hasRendered) {
+            this.generateVisibleWorld();
+        }
+        for (var id in this.gameModel.entities) {
+            this.gameModel.entities[id].tick();
+        }
+        for (var i = 0; i < this.removeSprites.length; i++) {
+            var remove = this.removeSprites[i];
+            if (remove.ticks-- == 0) {
+                this.scene.remove(remove.sprite);
+                this.removeSprites.splice(i--, 1);
+            }
+        }
+        if (this.debug && this.tickCount % 600 == 10) {
+            console.log(this.scene.children.length, " objects in scene");
+        }
+    };
+
+    Game.prototype.handleResize = function () {
         this.cameraDeadzone = new THREE.Vector2(window.innerWidth / 5, window.innerHeight / 5);
-        if (tickCount != 0) {
+        if (this.tickCount != 0) {
             this.generateVisibleWorld();
         }
     };
 
+    // End Platformer2D implementation
     // Begin InputListener interface implementation
     Game.prototype.handleKeyUp = function (event) {
         var key = INPUT_MAP[event.which];
@@ -998,61 +1196,6 @@ var Game = (function () {
         return raycaster.ray.intersectPlane(this.groundPlane);
     };
 
-    Game.prototype.getGroundBeneathEntity = function (entity) {
-        var lc = this.localToBlock(entity.sprite.position.x, entity.sprite.position.y);
-        var height = lc[1] - 1;
-        while (!this.gameModel.terrainGrid.has(lc[0], height)) {
-            if (height <= lc[1] - 6) {
-                return null;
-            }
-            height -= 1;
-        }
-        return this.gameModel.terrainGrid.get(lc[0], height);
-    };
-
-    Game.prototype.start = function () {
-        this.gameModel.player = new Player(this);
-        this.addEntity(this.gameModel.player);
-
-        var bgController = new BackgroundController(this.scene);
-        bgController.drawBackground();
-
-        var airGenerator = new AirGenerator(5, 7);
-        this.addEntity(airGenerator);
-
-        var camera_block_position = this.localToBlock(this.camera.position.x, this.camera.position.y);
-        this.creatureSpawner.spawnCreatures(camera_block_position[0], camera_block_position[1]);
-
-        var superWeed = new SuperWeed(15, 0);
-        this.addEntity(superWeed);
-
-        window.addEventListener('resize', this.resize.bind(this));
-
-        this.animate();
-    };
-
-    // Called when when we are allowed to render. In general at 60 fps.
-    Game.prototype.animate = function () {
-        this.now = getNow();
-        this.unprocessedFrames += (this.now - this.lastTime) * 60.0 / 1000.0; // 60 fps
-        this.lastTime = this.now;
-        if (this.unprocessedFrames > MAX_CATCHUP) {
-            this.unprocessedFrames = MAX_CATCHUP;
-        }
-        while (this.unprocessedFrames >= 1.0) {
-            this.tick();
-            this.unprocessedFrames -= 1.0;
-        }
-        this.render();
-        requestAnimationFrame(this.animate.bind(this));
-    };
-
-    // Renders a single frame
-    Game.prototype.render = function () {
-        this.hasRendered = true;
-        this.renderer.render(this.scene, this.camera);
-    };
-
     Game.prototype.generateVisibleWorld = function () {
         var topLeftLc = this.ndcToLocal(-1, 1);
         var bottomRightLc = this.ndcToLocal(1, -1);
@@ -1130,58 +1273,6 @@ var Game = (function () {
         return [topLeft, bottomRight];
     };
 
-    // Find the set of solid blocks which are fully or partially inside the given
-    // rectangle. Blocks touching but outside are not considered collisions.
-    Game.prototype.blockCollisions = function (topLeftLc, bottomRightLc) {
-        // We round "in" on edges.
-        var nearestTopLeftBc = [
-            Math.round(topLeftLc[0] / BLOCK_SIZE),
-            Math.ceil((topLeftLc[1] / BLOCK_SIZE) - 0.5)
-        ];
-        var nearestBottomRightBc = [
-            Math.ceil((bottomRightLc[0] / BLOCK_SIZE) - 0.5),
-            Math.round(bottomRightLc[1] / BLOCK_SIZE)
-        ];
-        var blocks = [];
-        for (var x = nearestTopLeftBc[0]; x <= nearestBottomRightBc[0]; x++) {
-            for (var y = nearestTopLeftBc[1]; y >= nearestBottomRightBc[1]; y--) {
-                if (this.gameModel.terrainGrid.has(x, y)) {
-                    blocks.push([x, y]);
-                }
-            }
-        }
-        return blocks;
-    };
-
-    Game.prototype.onGround = function (entity) {
-        var ground = this.getGroundBeneathEntity(entity);
-        if (!ground) {
-            return false;
-        }
-        return entity.sprite.position.y - (ground.sprite.position.y + MAGIC_NUMBER) < 1;
-    };
-
-    // Single tick of game time (1 frame)
-    Game.prototype.tick = function () {
-        if (this.hasRendered) {
-            this.generateVisibleWorld();
-        }
-        for (var id in this.gameModel.entities) {
-            this.gameModel.entities[id].tick();
-        }
-        for (var i = 0; i < this.removeSprites.length; i++) {
-            var remove = this.removeSprites[i];
-            if (remove.ticks-- == 0) {
-                this.scene.remove(remove.sprite);
-                this.removeSprites.splice(i--, 1);
-            }
-        }
-        if (this.debug && tickCount % 600 == 10) {
-            console.log(this.scene.children.length, " objects in scene");
-        }
-        tickCount++;
-    };
-
     Game.prototype.panCamera = function (x, y) {
         if (x != null) {
             this.camera.position.x += x;
@@ -1255,7 +1346,7 @@ var Game = (function () {
         return this.drawRect(tlLc, brLc, color);
     };
     return Game;
-})();
+})(Platformer2D);
 
 var game;
 window.addEventListener('load', function () {
