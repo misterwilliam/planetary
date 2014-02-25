@@ -2,6 +2,7 @@
 /// <reference path='lib/seedrandom.d.ts'/>
 
 /// <reference path='engine/entity.ts'/>
+/// <reference path='engine/game2d.ts'/>
 /// <reference path='engine/grid.ts'/>
 /// <reference path='universe/spawner.ts'/>
 /// <reference path='universe/entities/air-generator.ts'/>
@@ -18,15 +19,7 @@
 /// <reference path='atmosphere.ts'/>
 /// <reference path='player.ts'/>
 /// <reference path='background.ts'/>
-
-var getNow = (function() {
-  if (window.performance && window.performance.now) {
-    return window.performance.now.bind(window.performance);
-  }
-  return function(){return +new Date()};
-})();
-
-var tickCount = 0;
+/// <reference path='collision.ts'/>
 
 // Creates a new SpriteMaterial with nearest-neighbor texture filtering from
 // image URL.
@@ -36,46 +29,71 @@ function LoadJaggyMaterial(url:string) {
   return new THREE.SpriteMaterial({map: texture});
 };
 
-class Game implements InputListener {
-  scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(90, null, 0.1, 1000);
-  renderer = new THREE.WebGLRenderer();
-  projector = new THREE.Projector();
-
+class Game extends Platformer2D implements InputListener {
   gameModel = new GameModel();
   inputController : InputController;  // Set in constructor
-
   creatureSpawner = new CreatureSpawner(this);
-
-  now = getNow();
-  lastTime = getNow();
-  unprocessedFrames = 0;
 
   debug = false;
   groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
   atmosphereController = new AtmosphereController(this.scene);
   debugSprites : THREE.Object3D[];
-  hasRendered = false;
   removeSprites : {ticks:number; sprite:THREE.Object3D}[] = [];
   cameraDeadzone = new THREE.Vector2(1000, 1000);
 
   constructor(inputController : InputController) {
+    super();
     this.inputController = inputController;
-    this.camera.position.set(0, 0, 800);
-    this.resize();
-    document.body.appendChild(this.renderer.domElement);
   }
 
-  resize() {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+  // Begin Platformer2D implementation
+  handleStart() {
+    this.gameModel.player = new Player(this);
+    this.addEntity(this.gameModel.player);
+
+    var bgController = new BackgroundController(this.scene);
+    bgController.drawBackground();
+
+    var airGenerator = new AirGenerator(5, 7);
+    this.addEntity(airGenerator);
+
+    var camera_block_position = this.localToBlock(this.camera.position.x,
+        this.camera.position.y);
+    this.creatureSpawner.spawnCreatures(camera_block_position[0],
+        camera_block_position[1]);
+
+    var superWeed = new SuperWeed(15, 0);
+    this.addEntity(superWeed);
+  }
+
+  // Single tick of game time (1 frame)
+  handleTick() {
+    if (this.hasRendered) {
+      this.generateVisibleWorld();
+    }
+    for (var id in this.gameModel.entities) {
+      this.gameModel.entities[id].tick();
+    }
+    for (var i = 0; i < this.removeSprites.length; i++) {
+      var remove = this.removeSprites[i];
+      if (remove.ticks-- == 0) {
+        this.scene.remove(remove.sprite);
+        this.removeSprites.splice(i--, 1);
+      }
+    }
+    if (this.debug && this.tickCount % 600 == 10) {
+      console.log(this.scene.children.length, " objects in scene");
+    }
+  }
+
+  handleResize() {
     this.cameraDeadzone = new THREE.Vector2(
         window.innerWidth / 5, window.innerHeight / 5);
-    if (tickCount != 0) {
+    if (this.tickCount != 0) {
       this.generateVisibleWorld();
     }
   }
+  // End Platformer2D implementation
 
   // Begin InputListener interface implementation
   handleKeyUp(event : KeyboardEvent) {
@@ -162,64 +180,6 @@ class Game implements InputListener {
     return raycaster.ray.intersectPlane(this.groundPlane);
   }
 
-  getGroundBeneathEntity(entity:Entity):Ground {
-    var lc = this.localToBlock(entity.sprite.position.x,
-                               entity.sprite.position.y);
-    var height = lc[1] - 1;
-    while (!this.gameModel.terrainGrid.has(lc[0], height)) {
-      if (height <= lc[1]-6) {
-        return null;
-      }
-      height -= 1;
-    }
-    return this.gameModel.terrainGrid.get(lc[0], height);
-  }
-
-  start() {
-    this.gameModel.player = new Player(this);
-    this.addEntity(this.gameModel.player);
-
-    var bgController = new BackgroundController(this.scene);
-    bgController.drawBackground();
-
-    var airGenerator = new AirGenerator(5, 7);
-    this.addEntity(airGenerator);
-
-    var camera_block_position = this.localToBlock(this.camera.position.x,
-        this.camera.position.y);
-    this.creatureSpawner.spawnCreatures(camera_block_position[0],
-        camera_block_position[1]);
-
-    var superWeed = new SuperWeed(15, 0);
-    this.addEntity(superWeed);
-
-    window.addEventListener('resize', this.resize.bind(this));
-
-    this.animate();
-  }
-
-  // Called when when we are allowed to render. In general at 60 fps.
-  animate() {
-    this.now = getNow();
-    this.unprocessedFrames += (this.now - this.lastTime) * 60.0 / 1000.0; // 60 fps
-    this.lastTime = this.now;
-    if (this.unprocessedFrames > MAX_CATCHUP) {
-      this.unprocessedFrames = MAX_CATCHUP;
-    }
-    while (this.unprocessedFrames >= 1.0) {
-      this.tick();
-      this.unprocessedFrames -= 1.0;
-    }
-    this.render();
-    requestAnimationFrame(this.animate.bind(this));
-  }
-
-  // Renders a single frame
-  render() {
-    this.hasRendered = true;
-    this.renderer.render(this.scene, this.camera);
-  }
-
   generateVisibleWorld() {
     var topLeftLc = this.ndcToLocal(-1, 1);
     var bottomRightLc = this.ndcToLocal(1, -1);
@@ -298,58 +258,6 @@ class Game implements InputListener {
     return [topLeft, bottomRight];
   }
 
-  // Find the set of solid blocks which are fully or partially inside the given
-  // rectangle. Blocks touching but outside are not considered collisions.
-  blockCollisions(topLeftLc:number[], bottomRightLc:number[]):number[][] {
-    // We round "in" on edges.
-    var nearestTopLeftBc = [
-      Math.round(topLeftLc[0] / BLOCK_SIZE),
-      Math.ceil((topLeftLc[1] / BLOCK_SIZE) - 0.5)
-    ];
-    var nearestBottomRightBc = [
-      Math.ceil((bottomRightLc[0] / BLOCK_SIZE) - 0.5),
-      Math.round(bottomRightLc[1] / BLOCK_SIZE)
-    ];
-    var blocks : number[][] = [];
-    for (var x = nearestTopLeftBc[0]; x <= nearestBottomRightBc[0]; x++) {
-      for (var y = nearestTopLeftBc[1]; y >= nearestBottomRightBc[1]; y--) {
-        if (this.gameModel.terrainGrid.has(x, y)) {
-          blocks.push([x,y]);
-        }
-      }
-    }
-    return blocks;
-  }
-
-  onGround(entity:Entity) : boolean {
-    var ground = this.getGroundBeneathEntity(entity);
-    if (!ground) {
-      return false;
-    }
-    return entity.sprite.position.y - (ground.sprite.position.y + MAGIC_NUMBER) < 1;
-  }
-
-  // Single tick of game time (1 frame)
-  tick() {
-    if (this.hasRendered) {
-      this.generateVisibleWorld();
-    }
-    for (var id in this.gameModel.entities) {
-      this.gameModel.entities[id].tick();
-    }
-    for (var i = 0; i < this.removeSprites.length; i++) {
-      var remove = this.removeSprites[i];
-      if (remove.ticks-- == 0) {
-        this.scene.remove(remove.sprite);
-        this.removeSprites.splice(i--, 1);
-      }
-    }
-    if (this.debug && tickCount % 600 == 10) {
-      console.log(this.scene.children.length, " objects in scene");
-    }
-    tickCount++;
-  }
-
   panCamera(x?:number, y?:number) {
     if (x != null) {
       this.camera.position.x += x;
@@ -358,7 +266,7 @@ class Game implements InputListener {
       this.camera.position.y += y;
     }
     this.generateVisibleWorld();
-    
+
     var camera_block_position = this.localToBlock(this.camera.position.x,
         this.camera.position.y);
     this.creatureSpawner.spawnCreatures(camera_block_position[0],

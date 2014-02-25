@@ -22,11 +22,14 @@ class Player implements Entity {
   id : number = -1;
   onGround = true;
   jumpTicks = 0;
+  collisionDetector : BlockCollisionDetector;
 
   constructor(public game:Game) {
     this.sprite.scale.set(DUDE_WIDTH, DUDE_HEIGHT, 1.0);
     this.flashSprite.scale.set(DUDE_WIDTH, DUDE_HEIGHT, 1.0);
     this.teleport(0, 10);
+    this.collisionDetector =
+      new BlockCollisionDetector(game.gameModel.terrainGrid);
   }
 
   tick() {
@@ -86,87 +89,36 @@ class Player implements Entity {
 
     this.onGround = false;
     var bounding = game.boundingBox(this.sprite);
-    var collisions = this.game.blockCollisions(bounding[0], bounding[1]);
-    collisions.forEach((bc) => {
+    var collisions = this.collisionDetector.collide(
+      bounding[0], bounding[1], new THREE.Vector2(this.speedX, this.speedY));
+    for (var i = 0; i < collisions.length; i++) {
+      var collision = collisions[i];
+      var line = collision.line();
+      switch (collision.side) {
+      case BlockSide.LEFT:
+        pos.x = Math.min(pos.x, line - DUDE_WIDTH / 2);
+        break;
+      case BlockSide.RIGHT:
+        pos.x = Math.max(pos.x, line + DUDE_WIDTH / 2);
+        break;
+      case BlockSide.TOP:
+        pos.y = Math.max(pos.y, line + DUDE_HEIGHT / 2);
+        this.onGround = true;
+        break;
+      case BlockSide.BOTTOM:
+        pos.y = Math.min(pos.y, line - DUDE_HEIGHT / 2);
+        this.jumpTicks = 0;
+        break;
+      }
+
       if (game.debug) {
-        game.addSpriteForTicks(game.outlineBlock(bc[0], bc[1], 0xffff00));
+        game.addSpriteForTicks(
+          game.outlineBlock(collision.bc[0], collision.bc[1], 0xffff00));
+        var segment = collision.segment();
+        game.addSpriteForTicks(
+          game.drawLine(segment[0], segment[1], 0xff0000), 3);
       }
-      var lc = game.blockToLocal(bc[0], bc[1]);
-
-      // To know how to react to this collision, we need to figure out which of
-      // its 4 sides we would have hit first, given our previous position.
-      //
-      // We can eliminate 1 side from each axis using our direction. E.g. we
-      // couldn't have hit the bottom if we're moving down, or the left if
-      // we're moving left.
-      //
-      // Then we decide which of the 2 remaining sides we hit first by comparing
-      // block penetration time on each axis.
-
-      var timeX = Infinity;
-      if (this.speedX > 0) {  // Moving right.
-        timeX = (bounding[1][0] - (lc[0] - HALF_BLOCK)) / this.speedX;
-      } else if (this.speedX < 0) {  // Moving left.
-        timeX = ((lc[0] + HALF_BLOCK) - bounding[0][0]) / -this.speedX;
-      }
-
-      var timeY = Infinity;
-      if (this.speedY > 0) {  // Moving down.
-        timeY = (bounding[0][1] - (lc[1] - HALF_BLOCK)) / this.speedY;
-      } else if (this.speedY < 0) {  // Moving up.
-        timeY = ((lc[1] + HALF_BLOCK) - bounding[1][1]) / -this.speedY;
-      }
-
-      if (timeX < timeY) {
-        if (this.speedX > 0) {  // Hit left side first.
-          // Ignore collision with a side that has an adjacent block, since its
-          // an "inside" edge.
-          if (!game.gameModel.terrainGrid.has(bc[0] - 1, bc[1])) {
-            pos.x = Math.min(pos.x, (lc[0] - HALF_BLOCK) - DUDE_WIDTH / 2);
-            if (game.debug) {
-              game.addSpriteForTicks(game.drawLine(
-                [lc[0] - HALF_BLOCK, lc[1] + HALF_BLOCK],
-                [lc[0] - HALF_BLOCK, lc[1] - HALF_BLOCK],
-                0xff0000), 3);
-            }
-          }
-        } else {  // Hit right side first.
-          if (!game.gameModel.terrainGrid.has(bc[0] + 1, bc[1])) {
-            pos.x = Math.max(pos.x, (lc[0] + HALF_BLOCK) + DUDE_WIDTH / 2);
-            if (game.debug) {
-              game.addSpriteForTicks(game.drawLine(
-                [lc[0] + HALF_BLOCK, lc[1] + HALF_BLOCK],
-                [lc[0] + HALF_BLOCK, lc[1] - HALF_BLOCK],
-                0xff0000), 3);
-            }
-          }
-        }
-      } else {
-        if (this.speedY > 0) {  // Hit bottom first.
-          if (!game.gameModel.terrainGrid.has(bc[0], bc[1] - 1)) {
-            pos.y = Math.min(pos.y, (lc[1] - HALF_BLOCK) - DUDE_HEIGHT / 2);
-            this.jumpTicks = 0;
-            if (game.debug) {
-              game.addSpriteForTicks(game.drawLine(
-                [lc[0] + HALF_BLOCK, lc[1] - HALF_BLOCK],
-                [lc[0] - HALF_BLOCK, lc[1] - HALF_BLOCK],
-                0xff0000), 3);
-            }
-          }
-        } else {  // Hit top first.
-          if (!game.gameModel.terrainGrid.has(bc[0], bc[1] + 1)) {
-            pos.y = Math.max(pos.y, (lc[1] + HALF_BLOCK) + DUDE_HEIGHT / 2);
-            this.onGround = true;
-            if (game.debug) {
-              game.addSpriteForTicks(game.drawLine(
-                [lc[0] + HALF_BLOCK, lc[1] + HALF_BLOCK],
-                [lc[0] - HALF_BLOCK, lc[1] + HALF_BLOCK],
-                0xff0000), 3);
-            }
-          }
-        }
-      }
-    });
+    }
 
     if (game.hasRendered) {
       var cameraOffset = this.sprite.position.clone().sub(game.camera.position);
