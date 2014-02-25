@@ -19,6 +19,7 @@
 /// <reference path='atmosphere.ts'/>
 /// <reference path='player.ts'/>
 /// <reference path='background.ts'/>
+/// <reference path='collision.ts'/>
 
 // Creates a new SpriteMaterial with nearest-neighbor texture filtering from
 // image URL.
@@ -179,19 +180,6 @@ class Game extends Platformer2D implements InputListener {
     return raycaster.ray.intersectPlane(this.groundPlane);
   }
 
-  getGroundBeneathEntity(entity:Entity):Ground {
-    var lc = this.localToBlock(entity.sprite.position.x,
-                               entity.sprite.position.y);
-    var height = lc[1] - 1;
-    while (!this.gameModel.terrainGrid.has(lc[0], height)) {
-      if (height <= lc[1]-6) {
-        return null;
-      }
-      height -= 1;
-    }
-    return this.gameModel.terrainGrid.get(lc[0], height);
-  }
-
   generateVisibleWorld() {
     var topLeftLc = this.ndcToLocal(-1, 1);
     var bottomRightLc = this.ndcToLocal(1, -1);
@@ -270,37 +258,6 @@ class Game extends Platformer2D implements InputListener {
     return [topLeft, bottomRight];
   }
 
-  // Find the set of solid blocks which are fully or partially inside the given
-  // rectangle. Blocks touching but outside are not considered collisions.
-  blockCollisions(topLeftLc:number[], bottomRightLc:number[]):number[][] {
-    // We round "in" on edges.
-    var nearestTopLeftBc = [
-      Math.round(topLeftLc[0] / BLOCK_SIZE),
-      Math.ceil((topLeftLc[1] / BLOCK_SIZE) - 0.5)
-    ];
-    var nearestBottomRightBc = [
-      Math.ceil((bottomRightLc[0] / BLOCK_SIZE) - 0.5),
-      Math.round(bottomRightLc[1] / BLOCK_SIZE)
-    ];
-    var blocks : number[][] = [];
-    for (var x = nearestTopLeftBc[0]; x <= nearestBottomRightBc[0]; x++) {
-      for (var y = nearestTopLeftBc[1]; y >= nearestBottomRightBc[1]; y--) {
-        if (this.gameModel.terrainGrid.has(x, y)) {
-          blocks.push([x,y]);
-        }
-      }
-    }
-    return blocks;
-  }
-
-  onGround(entity:Entity) : boolean {
-    var ground = this.getGroundBeneathEntity(entity);
-    if (!ground) {
-      return false;
-    }
-    return entity.sprite.position.y - (ground.sprite.position.y + MAGIC_NUMBER) < 1;
-  }
-
   panCamera(x?:number, y?:number) {
     if (x != null) {
       this.camera.position.x += x;
@@ -309,7 +266,7 @@ class Game extends Platformer2D implements InputListener {
       this.camera.position.y += y;
     }
     this.generateVisibleWorld();
-    
+
     var camera_block_position = this.localToBlock(this.camera.position.x,
         this.camera.position.y);
     this.creatureSpawner.spawnCreatures(camera_block_position[0],
