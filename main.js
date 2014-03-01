@@ -614,7 +614,6 @@ var Ground = (function () {
     };
     return Ground;
 })();
-/// <reference path='engine/game2d.ts'/>
 var Hud = (function () {
     function Hud(game) {
         this.scene = new THREE.Scene();
