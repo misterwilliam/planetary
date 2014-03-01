@@ -614,13 +614,16 @@ var Ground = (function () {
     };
     return Ground;
 })();
+// Encapsulates HUD related logic.
+// Depends on game calling tick() and handleResize() at the appropriate times.
+// Creates a canvas for the renderer appended the body during the constructor.
+// This can create a brittle dependency if the DOM is not in the expected state.
 var Hud = (function () {
-    function Hud(game) {
+    function Hud() {
         this.scene = new THREE.Scene();
         this.camera = new THREE.OrthographicCamera(Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerWidth, Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerWidth, Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerHeight, Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerHeight, 0.1, 1000);
         this.renderer = new THREE.WebGLRenderer({ alpha: true });
-        this.game = game;
-        this.camera.position.set(0, 0, 900);
+        this.camera.position.set(0, 0, 800);
         this.renderer.domElement.style.position = "absolute";
         document.body.appendChild(this.renderer.domElement);
 
@@ -632,6 +635,15 @@ var Hud = (function () {
             heart.position.set(Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerWidth - 74 * (i + 1), Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerHeight - 64, -1);
             heart.scale.set(4 * 16, 4 * 16, 1.0);
             this.scene.add(heart);
+        }
+        this.inventorySlots = new Array();
+        this.inventorySize = 5;
+        for (var i = 0; i < this.inventorySize; i++) {
+            var slot = new THREE.Sprite(Hud.SLOT_MATERIAL);
+            this.inventorySlots[i] = slot;
+            slot.position.set(Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerWidth + 118 * i + 2 * 32, Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerHeight + 63, -1);
+            slot.scale.set(4 * 32, 4 * 32, 1.0);
+            this.scene.add(slot);
         }
 
         // This stuff should stay
@@ -658,6 +670,7 @@ var Hud = (function () {
     };
     Hud.DEFAULT_ZOOM_FACTOR = 3;
     Hud.HEART_MATERIAL = LoadJaggyMaterial('images/heart.png');
+    Hud.SLOT_MATERIAL = LoadJaggyMaterial('images/inventory-slot.png');
     return Hud;
 })();
 // For most use cases, checking the state of the InputController.input is what
@@ -1107,7 +1120,7 @@ var Game = (function (_super) {
         _super.call(this);
         this.gameModel = new GameModel();
         this.creatureSpawner = new CreatureSpawner(this);
-        this.hud = new Hud(this);
+        this.hud = new Hud();
         this.debug = false;
         this.groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
         this.atmosphereController = new AtmosphereController(this.scene);
