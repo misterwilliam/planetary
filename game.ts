@@ -15,6 +15,7 @@
 /// <reference path='consts.ts'/>
 /// <reference path='game_model.ts'/>
 /// <reference path='ground.ts'/>
+/// <reference path='hud.ts'/>
 /// <reference path='input.ts'/>
 /// <reference path='atmosphere.ts'/>
 /// <reference path='player.ts'/>
@@ -33,6 +34,7 @@ class Game extends Platformer2D implements InputListener {
   gameModel = new GameModel();
   inputController : InputController;  // Set in constructor
   creatureSpawner = new CreatureSpawner(this);
+  hud = new Hud(this);
 
   debug = false;
   groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
@@ -68,6 +70,7 @@ class Game extends Platformer2D implements InputListener {
 
   // Single tick of game time (1 frame)
   handleTick() {
+    this.hud.tick();
     if (this.hasRendered) {
       this.generateVisibleWorld();
     }
@@ -91,6 +94,7 @@ class Game extends Platformer2D implements InputListener {
         window.innerWidth / 5, window.innerHeight / 5);
     if (this.tickCount != 0) {
       this.generateVisibleWorld();
+      this.hud.handleResize();
     }
   }
   // End Platformer2D implementation
