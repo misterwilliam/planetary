@@ -6,6 +6,7 @@
 class Hud {
   private static DEFAULT_ZOOM_FACTOR = 3;
   private static HEART_MATERIAL = LoadJaggyMaterial('images/heart.png');
+  private static SLOT_MATERIAL = LoadJaggyMaterial('images/inventory-slot.png');
 
   scene  : THREE.Scene = new THREE.Scene();
   camera : THREE.OrthographicCamera = new THREE.OrthographicCamera(
@@ -16,6 +17,9 @@ class Hud {
   renderer = new THREE.WebGLRenderer({alpha:true});
 
   hearts : THREE.Sprite[];
+  inventorySize : Number;
+
+  private inventorySlots : THREE.Sprite[];
 
   constructor() {
     this.camera.position.set(0, 0, 800);
@@ -32,6 +36,17 @@ class Hud {
         Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerHeight - 64, -1);
       heart.scale.set(4 * 16, 4 * 16, 1.0);
       this.scene.add(heart);
+    }
+    this.inventorySlots = new Array<THREE.Sprite>();
+    this.inventorySize = 5;
+    for (var i = 0; i < this.inventorySize; i++) {
+      var slot = new THREE.Sprite(Hud.SLOT_MATERIAL);
+      this.inventorySlots[i] = slot;
+      slot.position.set(
+        Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerWidth + 118 * i + 2 * 32,
+        Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerHeight + 63, -1);
+      slot.scale.set(4 * 32, 4 * 32, 1.0);
+      this.scene.add(slot);
     }
 
     // This stuff should stay
