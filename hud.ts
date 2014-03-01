@@ -1,5 +1,3 @@
-/// <reference path='engine/game2d.ts'/>
-
 class Hud {
   private static DEFAULT_ZOOM_FACTOR = 3;
   private static HEART_MATERIAL = LoadJaggyMaterial('images/heart.png');
