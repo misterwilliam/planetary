@@ -1,8 +1,12 @@
+// Encapsulates HUD related logic.
+// Depends on game calling tick() and handleResize() at the appropriate times.
+// Creates a canvas for the renderer appended the body during the constructor.
+// This can create a brittle dependency if the DOM is not in the expected state.
+
 class Hud {
   private static DEFAULT_ZOOM_FACTOR = 3;
   private static HEART_MATERIAL = LoadJaggyMaterial('images/heart.png');
 
-  game : Game;
   scene  : THREE.Scene = new THREE.Scene();
   camera : THREE.OrthographicCamera = new THREE.OrthographicCamera(
     Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerWidth,
@@ -13,9 +17,8 @@ class Hud {
 
   hearts : THREE.Sprite[];
 
-  constructor(game : Game) {
-    this.game = game;
-    this.camera.position.set(0, 0, 900);
+  constructor() {
+    this.camera.position.set(0, 0, 800);
     this.renderer.domElement.style.position = "absolute";
     document.body.appendChild(this.renderer.domElement);
 
