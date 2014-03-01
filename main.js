@@ -614,6 +614,53 @@ var Ground = (function () {
     };
     return Ground;
 })();
+/// <reference path='engine/game2d.ts'/>
+var Hud = (function () {
+    function Hud(game) {
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.OrthographicCamera(Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerWidth, Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerWidth, Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerHeight, Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerHeight, 0.1, 1000);
+        this.renderer = new THREE.WebGLRenderer({ alpha: true });
+        this.game = game;
+        this.camera.position.set(0, 0, 900);
+        this.renderer.domElement.style.position = "absolute";
+        document.body.appendChild(this.renderer.domElement);
+
+        // Stuff that should be moved out.
+        this.hearts = new Array();
+        for (var i = 0; i < 3; i++) {
+            var heart = new THREE.Sprite(Hud.HEART_MATERIAL);
+            this.hearts[i] = heart;
+            heart.position.set(Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerWidth - 74 * (i + 1), Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerHeight - 64, -1);
+            heart.scale.set(4 * 16, 4 * 16, 1.0);
+            this.scene.add(heart);
+        }
+
+        // This stuff should stay
+        this.handleResize();
+    }
+    Hud.prototype.tick = function () {
+        this.renderer.render(this.scene, this.camera);
+    };
+
+    Hud.prototype.handleResize = function () {
+        for (var i = 0; i < 3; i++) {
+            this.hearts[i].position.set(Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerWidth - 74 * (i + 1), Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerHeight - 64, -1);
+        }
+
+        // Update camera size
+        this.camera.left = Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerWidth;
+        this.camera.right = Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerWidth;
+        this.camera.top = Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerHeight;
+        this.camera.bottom = Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerHeight;
+        this.camera.updateProjectionMatrix();
+
+        // Update renderer size
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    Hud.DEFAULT_ZOOM_FACTOR = 3;
+    Hud.HEART_MATERIAL = LoadJaggyMaterial('images/heart.png');
+    return Hud;
+})();
 // For most use cases, checking the state of the InputController.input is what
 // is desired for knowing the current state of the input.
 //
@@ -1040,6 +1087,7 @@ var BlockCollision = (function () {
 /// <reference path='consts.ts'/>
 /// <reference path='game_model.ts'/>
 /// <reference path='ground.ts'/>
+/// <reference path='hud.ts'/>
 /// <reference path='input.ts'/>
 /// <reference path='atmosphere.ts'/>
 /// <reference path='player.ts'/>
@@ -1060,6 +1108,7 @@ var Game = (function (_super) {
         _super.call(this);
         this.gameModel = new GameModel();
         this.creatureSpawner = new CreatureSpawner(this);
+        this.hud = new Hud(this);
         this.debug = false;
         this.groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
         this.atmosphereController = new AtmosphereController(this.scene);
@@ -1087,6 +1136,7 @@ var Game = (function (_super) {
 
     // Single tick of game time (1 frame)
     Game.prototype.handleTick = function () {
+        this.hud.tick();
         if (this.hasRendered) {
             this.generateVisibleWorld();
         }
@@ -1109,6 +1159,7 @@ var Game = (function (_super) {
         this.cameraDeadzone = new THREE.Vector2(window.innerWidth / 5, window.innerHeight / 5);
         if (this.tickCount != 0) {
             this.generateVisibleWorld();
+            this.hud.handleResize();
         }
     };
 
