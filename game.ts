@@ -34,7 +34,7 @@ class Game extends Platformer2D implements InputListener {
   gameModel = new GameModel();
   inputController : InputController;  // Set in constructor
   creatureSpawner = new CreatureSpawner(this);
-  hud = new Hud(this);
+  hud = new Hud();
 
   debug = false;
   groundPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
