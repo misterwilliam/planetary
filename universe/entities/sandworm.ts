@@ -23,8 +23,10 @@ class Sandworm implements Entity {
 
     if (this.state == "left") {
       this.sprite.position.x -= 1;
+      this.sprite.scale.x = -(4*64);
     } else {
       this.sprite.position.x += 1;
+      this.sprite.scale.x = (4*64);
     }
 
     this.decisionTimer++;
