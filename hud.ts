@@ -17,9 +17,10 @@ class Hud {
   renderer = new THREE.WebGLRenderer({alpha:true});
 
   hearts : THREE.Sprite[];
-  inventorySize : Number;
+  numHearts : Number;
+  numInventorySlots : Number;
 
-  private inventorySlots : THREE.Sprite[];
+  inventorySlots : THREE.Sprite[];
 
   constructor() {
     this.camera.position.set(0, 0, 800);
@@ -28,28 +29,24 @@ class Hud {
 
     // Stuff that should be moved out.
     this.hearts = new Array<THREE.Sprite>();
-    for (var i = 0; i < 3; i++) {
+    this.numHearts = 3;
+    for (var i = 0; i < this.numHearts; i++) {
       var heart = new THREE.Sprite(Hud.HEART_MATERIAL);
       this.hearts[i] = heart;
-      heart.position.set(
-        Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerWidth - 74 * (i + 1),
-        Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerHeight - 64, -1);
-      heart.scale.set(4 * 16, 4 * 16, 1.0);
+      this.hearts[i].scale.set(4 * 16, 4 * 16, 1.0);
       this.scene.add(heart);
     }
     this.inventorySlots = new Array<THREE.Sprite>();
-    this.inventorySize = 5;
-    for (var i = 0; i < this.inventorySize; i++) {
+    this.numInventorySlots = 5;
+    for (var i = 0; i < this.numInventorySlots; i++) {
       var slot = new THREE.Sprite(Hud.SLOT_MATERIAL);
       this.inventorySlots[i] = slot;
-      slot.position.set(
-        Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerWidth + 118 * i + 2 * 32,
-        Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerHeight + 63, -1);
       slot.scale.set(4 * 32, 4 * 32, 1.0);
       this.scene.add(slot);
     }
 
     // This stuff should stay
+    this.positionHudElements();
     this.handleResize();
   }
 
@@ -58,12 +55,7 @@ class Hud {
   }
 
   handleResize() {
-    // Update health position
-    for (var i = 0; i < 3; i++) {
-      this.hearts[i].position.set(
-        Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerWidth - 74 * (i + 1),
-        Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerHeight - 64, -1);
-    }
+    this.positionHudElements();
 
     // Update camera size
     this.camera.left = Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerWidth;
@@ -74,5 +66,24 @@ class Hud {
 
     // Update renderer size
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+
+
+  }
+
+  positionHudElements() {
+    // Position hearts
+    for (var i = 0; i < this.numHearts; i++) {
+      this.hearts[i].position.set(
+        Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerWidth - 74 * (i + 1),
+        Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerHeight - 64, -1);
+
+    }
+    // Position inventory slots
+    for (var i = 0; i < this.numInventorySlots; i++) {
+      this.inventorySlots[i].position.set(
+        Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerWidth + 118 * i + 2 * 32,
+        Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerHeight + 63, -1);
+      this.inventorySlots[i].scale.set(4 * 32, 4 * 32, 1.0);
+    }
   }
 }
