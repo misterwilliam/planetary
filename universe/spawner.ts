@@ -17,12 +17,12 @@ class CreatureSpawner {
   // improved.
   spawnCreatures(x : number, y : number) {
     var random_number = Math.random();
-    if (random_number > 0.95) {
+    if (random_number > 0.99) {
       this.spawnSomething(x);
     }
   }
 
-  // Spawn up to 10 creatures randomly position centered around x.
+  // Spawn up to 4 creatures randomly position centered around x.
   spawnSomething(x : number) {
     var random_x_offset = Math.floor((Math.random() * 60) - 30);
     var random_y_offset = Math.floor((Math.random() * 20) - 10);
@@ -41,7 +41,7 @@ class CreatureSpawner {
     this.creatureArray[this.i] = entity;
 
     this.i++;
-    if (this.i > 10) {
+    if (this.i > 4) {
       this.i = 0;
     }
   }

@@ -1,7 +1,7 @@
 var DUDE_MATERIAL = LoadJaggyMaterial('images/dude.png');
 var FLASH_MATERIAL = LoadJaggyMaterial('images/flash.png')
-var DUDE_WIDTH = 4 * 13;
-var DUDE_HEIGHT = 4 * 21;
+var DUDE_WIDTH = 4 * 16;
+var DUDE_HEIGHT = 4 * 32;
 
 var WALK_ACCELERATION = 3;
 var JUMP_INITIAL_SPEED = 5;
