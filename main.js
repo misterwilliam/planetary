@@ -142,12 +142,12 @@ var CreatureSpawner = (function () {
     // improved.
     CreatureSpawner.prototype.spawnCreatures = function (x, y) {
         var random_number = Math.random();
-        if (random_number > 0.95) {
+        if (random_number > 0.99) {
             this.spawnSomething(x);
         }
     };
 
-    // Spawn up to 10 creatures randomly position centered around x.
+    // Spawn up to 4 creatures randomly position centered around x.
     CreatureSpawner.prototype.spawnSomething = function (x) {
         var random_x_offset = Math.floor((Math.random() * 60) - 30);
         var random_y_offset = Math.floor((Math.random() * 20) - 10);
@@ -166,7 +166,7 @@ var CreatureSpawner = (function () {
         this.creatureArray[this.i] = entity;
 
         this.i++;
-        if (this.i > 10) {
+        if (this.i > 4) {
             this.i = 0;
         }
     };
@@ -216,13 +216,15 @@ var Boar = (function () {
         }
 
         if (this.state == "left") {
-            this.sprite.position.x -= 5;
+            this.sprite.position.x -= 4;
+            this.sprite.scale.x = -(4 * 32);
         } else {
-            this.sprite.position.x += 5;
+            this.sprite.position.x += 4;
+            this.sprite.scale.x = (4 * 32);
         }
 
         this.decisionTimer++;
-        if (this.decisionTimer == 30) {
+        if (this.decisionTimer == 60) {
             this.decisionTimer = 0;
         }
     };
@@ -301,8 +303,10 @@ var Sandworm = (function () {
 
         if (this.state == "left") {
             this.sprite.position.x -= 1;
+            this.sprite.scale.x = -(4 * 64);
         } else {
             this.sprite.position.x += 1;
+            this.sprite.scale.x = (4 * 64);
         }
 
         this.decisionTimer++;
@@ -629,24 +633,24 @@ var Hud = (function () {
 
         // Stuff that should be moved out.
         this.hearts = new Array();
-        for (var i = 0; i < 3; i++) {
+        this.numHearts = 3;
+        for (var i = 0; i < this.numHearts; i++) {
             var heart = new THREE.Sprite(Hud.HEART_MATERIAL);
             this.hearts[i] = heart;
-            heart.position.set(Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerWidth - 74 * (i + 1), Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerHeight - 64, -1);
-            heart.scale.set(4 * 16, 4 * 16, 1.0);
+            this.hearts[i].scale.set(4 * 16, 4 * 16, 1.0);
             this.scene.add(heart);
         }
         this.inventorySlots = new Array();
-        this.inventorySize = 5;
-        for (var i = 0; i < this.inventorySize; i++) {
+        this.numInventorySlots = 5;
+        for (var i = 0; i < this.numInventorySlots; i++) {
             var slot = new THREE.Sprite(Hud.SLOT_MATERIAL);
             this.inventorySlots[i] = slot;
-            slot.position.set(Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerWidth + 118 * i + 2 * 32, Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerHeight + 63, -1);
             slot.scale.set(4 * 32, 4 * 32, 1.0);
             this.scene.add(slot);
         }
 
         // This stuff should stay
+        this.positionHudElements();
         this.handleResize();
     }
     Hud.prototype.tick = function () {
@@ -654,9 +658,7 @@ var Hud = (function () {
     };
 
     Hud.prototype.handleResize = function () {
-        for (var i = 0; i < 3; i++) {
-            this.hearts[i].position.set(Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerWidth - 74 * (i + 1), Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerHeight - 64, -1);
-        }
+        this.positionHudElements();
 
         // Update camera size
         this.camera.left = Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerWidth;
@@ -667,6 +669,17 @@ var Hud = (function () {
 
         // Update renderer size
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+
+    Hud.prototype.positionHudElements = function () {
+        for (var i = 0; i < this.numHearts; i++) {
+            this.hearts[i].position.set(Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerWidth - 74 * (i + 1), Hud.DEFAULT_ZOOM_FACTOR * 0.5 * window.innerHeight - 64, -1);
+        }
+
+        for (var i = 0; i < this.numInventorySlots; i++) {
+            this.inventorySlots[i].position.set(Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerWidth + 118 * i + 2 * 32, Hud.DEFAULT_ZOOM_FACTOR * 0.5 * -window.innerHeight + 63, -1);
+            this.inventorySlots[i].scale.set(4 * 32, 4 * 32, 1.0);
+        }
     };
     Hud.DEFAULT_ZOOM_FACTOR = 3;
     Hud.HEART_MATERIAL = LoadJaggyMaterial('images/heart.png');
@@ -793,8 +806,8 @@ var AtmosphereController = (function () {
 })();
 var DUDE_MATERIAL = LoadJaggyMaterial('images/dude.png');
 var FLASH_MATERIAL = LoadJaggyMaterial('images/flash.png');
-var DUDE_WIDTH = 4 * 13;
-var DUDE_HEIGHT = 4 * 21;
+var DUDE_WIDTH = 4 * 16;
+var DUDE_HEIGHT = 4 * 32;
 
 var WALK_ACCELERATION = 3;
 var JUMP_INITIAL_SPEED = 5;
